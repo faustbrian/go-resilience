@@ -7,7 +7,7 @@ import (
 
 	"github.com/failsafe-go/failsafe-go"
 
-	"github.com/faustbrian/golib/pkg/resilience"
+	"github.com/faustbrian/go-resilience"
 )
 
 var benchmarkResult resilience.Result[int]

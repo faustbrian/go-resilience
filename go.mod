@@ -1,4 +1,4 @@
-module github.com/faustbrian/golib/pkg/resilience
+module github.com/faustbrian/go-resilience
 
 go 1.26.6
 

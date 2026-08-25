@@ -3,7 +3,7 @@
 The canonical generated reference is:
 
 ```sh
-go doc -all github.com/faustbrian/golib/pkg/resilience
+go doc -all github.com/faustbrian/go-resilience
 ```
 
 Primary entry points:

@@ -1,6 +1,6 @@
 goos: darwin
 goarch: arm64
-pkg: github.com/faustbrian/golib/pkg/resilience
+pkg: github.com/faustbrian/go-resilience
 cpu: Apple M4 Max
                                                      │ docs/benchmarks/raw/2026-08-02-darwin-arm64.txt │
                                                      │                     sec/op                      │
