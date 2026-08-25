@@ -39,7 +39,7 @@ fuzz:
 	$(GO) test ./... -run '^$$' -fuzz=FuzzTypedErrorsAndClockedEvents -fuzztime=$(FUZZ_TIME) -parallel=2
 
 mutation:
-	../../scripts/internal/run-mutation.sh enforce .
+	./.golib/scripts/internal/run-mutation.sh enforce .
 
 benchmark:
 	$(GO) test ./... -run '^$$' -bench . -benchmem -benchtime=$(BENCH_TIME)
