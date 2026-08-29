@@ -21,7 +21,7 @@
           "build_tags": []
         }
       ],
-      "purpose": "`resilience` is the small composition foundation for the focused resilience libraries in `golib`. It provides deterministic generic policy composition, typed outcomes, caller-owned total deadlines, bounded observation, and one process-local work budget shared by retry and hedge. It does not hide a default policy stack or implement focused resilience algorithms.",
+      "purpose": "`resilience` is a small composition foundation for focused resilience libraries. It provides deterministic generic policy composition, typed outcomes, caller-owned total deadlines, bounded observation, and one process-local work budget shared by retry and hedge. It does not hide a default policy stack or implement focused resilience algorithms.",
       "lifecycle": "stable",
       "kind": "public library",
       "releasable": true,
@@ -51,83 +51,9 @@
       "specifications": [],
       "conformance_corpora": [],
       "provenance": [],
-      "goal_files": [
-        ".ai/GOAL.md",
-        ".ai/GOAL_HARDEN.md"
-      ],
-      "goal_status": "implementation-evidence-inventoried",
-      "goal_evidence": [
-        {
-          "file": ".ai/GOAL.md",
-          "requirements_sha256": "1a01e7f2816b91f1aa03fc0b327a05ac89e045084eb8c6ed11d82c6d4010fac9",
-          "implementation_evidence": [
-            "CHANGELOG.md",
-            "README.md",
-            "docs/api.md",
-            "docs/hardening.md",
-            "docs/performance.md"
-          ],
-          "verification_gates": [
-            "format-check",
-            "tidy-check",
-            "safety",
-            "vet",
-            "test",
-            "race",
-            "coverage",
-            "lint",
-            "staticcheck",
-            "vulnerability",
-            "secrets",
-            "licenses",
-            "sbom",
-            "fuzz",
-            "mutation",
-            "nilaway",
-            "docs",
-            "api",
-            "conformance",
-            "interoperability",
-            "benchmark"
-          ],
-          "implementation_status": "implemented-requires-fresh-verification"
-        },
-        {
-          "file": ".ai/GOAL_HARDEN.md",
-          "requirements_sha256": "c32b86889c3f37c627044279341af28655485d33c262915ebd4e5dc64c222db0",
-          "implementation_evidence": [
-            "CHANGELOG.md",
-            "README.md",
-            "docs/api.md",
-            "docs/hardening.md",
-            "docs/performance.md"
-          ],
-          "verification_gates": [
-            "format-check",
-            "tidy-check",
-            "safety",
-            "vet",
-            "test",
-            "race",
-            "coverage",
-            "lint",
-            "staticcheck",
-            "vulnerability",
-            "secrets",
-            "licenses",
-            "sbom",
-            "fuzz",
-            "mutation",
-            "nilaway",
-            "docs",
-            "api",
-            "conformance",
-            "interoperability",
-            "benchmark"
-          ],
-          "implementation_status": "implemented-requires-fresh-verification"
-        }
-      ],
+      "goal_files": [],
+      "goal_status": "not-applicable",
+      "goal_evidence": [],
       "gates": {
         "api_compatibility": true,
         "benchmarks": true,

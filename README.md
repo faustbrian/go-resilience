@@ -10,8 +10,8 @@
 [![Go](https://img.shields.io/badge/go-1.26.6-00ADD8?logo=go)](https://go.dev/)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-`resilience` is the small composition foundation for the focused resilience
-libraries in `golib`. It provides deterministic generic policy composition,
+`resilience` is a small composition foundation for focused resilience
+libraries. It provides deterministic generic policy composition,
 typed outcomes, caller-owned total deadlines, bounded observation, and one
 process-local work budget shared by retry and hedge. It does not hide a default
 policy stack or implement focused resilience algorithms.
@@ -136,12 +136,6 @@ credentials, tenant IDs, or caller-provided maps.
 - [Operations and security](docs/operations.md)
 - [Migration](docs/migration.md)
 - [Performance](docs/performance.md)
-- [Hardening evidence](docs/hardening.md)
 - [FAQ](docs/faq.md)
 - [Security policy](SECURITY.md)
 - [Release notes](CHANGELOG.md)
-
-## Ecosystem
-
-Use the [Golib documentation portal](https://github.com/faustbrian/golib/blob/main/docs/index.md)
-to choose companion packages, supported stacks, recipes, and operations guidance.

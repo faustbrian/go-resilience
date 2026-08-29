@@ -99,8 +99,7 @@ func (err *BudgetRejectionError) Unwrap() error { return ErrBudgetRejected }
 
 // RejectionReasonOf extracts a bounded reason or returns the empty value.
 func RejectionReasonOf(err error) RejectionReason {
-	var rejection *BudgetRejectionError
-	if errors.As(err, &rejection) {
+	if rejection, ok := errors.AsType[*BudgetRejectionError](err); ok {
 		return rejection.Reason
 	}
 	return ""
