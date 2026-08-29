@@ -8,8 +8,8 @@ go doc -all github.com/faustbrian/go-resilience
 
 Primary entry points:
 
-- `NewExecutor[T](policies...)` validates and freezes outer-to-inner policy
-  composition;
+- `NewExecutor[T]` validates and freezes outer-to-inner policy composition when
+  given policies;
 - `Executor.Execute` runs one logical call synchronously;
 - `Executor.WithClock`, `WithTimeline`, and `WithObserver` return immutable
   executor copies;

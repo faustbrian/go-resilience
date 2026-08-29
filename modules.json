@@ -21,7 +21,7 @@
           "build_tags": []
         }
       ],
-      "purpose": "`resilience` is the small composition foundation for the focused resilience libraries in `golib`. It provides deterministic generic policy composition, typed outcomes, caller-owned total deadlines, bounded observation, and one process-local work budget shared by retry and hedge. It does not hide a default policy stack or implement focused resilience algorithms.",
+      "purpose": "`resilience` is a small composition foundation for focused resilience libraries. It provides deterministic generic policy composition, typed outcomes, caller-owned total deadlines, bounded observation, and one process-local work budget shared by retry and hedge. It does not hide a default policy stack or implement focused resilience algorithms.",
       "lifecycle": "stable",
       "kind": "public library",
       "releasable": true,

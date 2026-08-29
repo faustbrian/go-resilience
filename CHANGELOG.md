@@ -2,9 +2,15 @@
 
 ## Unreleased
 
+### Maintenance
+
+- Replace copied repository-local verification tooling with the released
+  `go-library-tools` v1.0.5 workflow while preserving the package's strict
+  coverage, mutation, fuzz, benchmark, API, and documentation gates.
+
 ### Documentation
 
-- Replace archived monorepo links and completed execution artifacts with a
+- Replace obsolete repository links and completed execution artifacts with a
   standalone, human-oriented documentation structure.
 
 ## 1.0.0 - 2026-08-25
