@@ -5,7 +5,7 @@
 ### Maintenance
 
 - Replace copied repository-local verification tooling with the released
-  `go-library-tools` v1.0.5 workflow while preserving the package's strict
+  `go-library-tools` v1.0.13 workflow while preserving the package's strict
   coverage, mutation, fuzz, benchmark, API, and documentation gates.
 
 ### Documentation
