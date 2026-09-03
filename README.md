@@ -18,7 +18,8 @@ policy stack or implement focused resilience algorithms.
 
 For the common construction, ownership, lifecycle, and package-selection
 vocabulary, see the versioned
-[Golib ecosystem index](https://github.com/faustbrian/go-library-tools/blob/v1.3.0/docs/ecosystem/README.md).
+[Golib ecosystem index](https://github.com/faustbrian/go-library-tools/blob/v1.4.0/docs/ecosystem/README.md)
+and its [Resilience family](https://github.com/faustbrian/go-library-tools/blob/v1.4.0/docs/ecosystem/design-language.md#package-families-and-selection).
 
 ## Quick start
 
