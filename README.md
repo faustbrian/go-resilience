@@ -16,6 +16,10 @@ typed outcomes, caller-owned total deadlines, bounded observation, and one
 process-local work budget shared by retry and hedge. It does not hide a default
 policy stack or implement focused resilience algorithms.
 
+For the common construction, ownership, lifecycle, and package-selection
+vocabulary, see the versioned
+[Golib ecosystem index](https://github.com/faustbrian/go-library-tools/blob/v1.3.0/docs/ecosystem/README.md).
+
 ## Quick start
 
 ```go

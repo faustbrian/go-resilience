@@ -4,6 +4,9 @@
 
 ### Maintenance
 
+- Publish complete ecosystem family, ownership, construction, lifecycle,
+  documentation, and package-selection metadata through the local and CI
+  cohesion gate.
 - Replace copied repository-local verification tooling with the released
   `go-library-tools` v1.0.5 workflow while preserving the package's strict
   coverage, mutation, fuzz, benchmark, API, and documentation gates.
