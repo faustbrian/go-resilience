@@ -4,6 +4,9 @@
 
 ### Maintenance
 
+- Adopt the checksum-verified `go-library-tools` v1.4.0 CLI and immutable W14
+  reusable workflow without changing the resilience API or runtime behavior.
+
 - Publish complete ecosystem family, ownership, construction, lifecycle,
   documentation, and package-selection metadata through the local and CI
   cohesion gate.
@@ -12,6 +15,9 @@
   coverage, mutation, fuzz, benchmark, API, and documentation gates.
 
 ### Documentation
+
+- Link ecosystem and Resilience family guidance to the immutable v1.4.0
+  documentation release.
 
 - Replace obsolete repository links and completed execution artifacts with a
   standalone, human-oriented documentation structure.
