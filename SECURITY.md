@@ -1,15 +1,27 @@
 # Security policy
 
-## Supported version
+## Supported versions
 
-Security fixes apply to the current unreleased line until the first v1 release
-establishes a maintained version policy.
+The latest stable v1 release receives security fixes. Older releases and the
+`main` branch are unsupported; upgrade before reporting unless the issue is a
+regression under active development.
 
-## Reporting
+| Version | Supported |
+| --- | --- |
+| Latest stable v1 release | Yes |
+| Older releases | No |
+| `main` | No |
 
-Report suspected vulnerabilities privately through GitHub security advisories.
+## Reporting a vulnerability
+
+Do not disclose a suspected vulnerability in a public issue. Use the
+repository's private security reporting facility when available. If private
+reporting is unavailable, ask a maintainer for a private contact channel
+without disclosing the vulnerability.
+
 Do not place credentials, customer data, production identifiers, or exploit
-payloads in public issues, fixtures, events, benchmarks, or mutation reports.
+payloads in a public report, initial contact request, fixture, event, benchmark,
+or mutation report.
 
 ## Model
 

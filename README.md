@@ -21,6 +21,14 @@ vocabulary, see the versioned
 [Golib ecosystem index](https://github.com/faustbrian/go-library-tools/blob/v1.4.0/docs/ecosystem/README.md)
 and its [Resilience family](https://github.com/faustbrian/go-library-tools/blob/v1.4.0/docs/ecosystem/design-language.md#package-families-and-selection).
 
+The module is a stable v1 public library. It requires Go 1.26.6 or newer.
+
+## Install
+
+```sh
+go get github.com/faustbrian/go-resilience@v1
+```
+
 ## Quick start
 
 ```go
@@ -94,6 +102,12 @@ coordination is actually required.
 
 ## Cancellation and ownership
 
+An `Executor` is immutable, reusable, and starts no goroutines. A `Budget` owns
+synchronized process-local accounting but no background work; the caller owns
+each logical `BudgetScope` and must close it when that logical operation stops
+admitting attempts. Policies, observers, clocks, and custom budget
+implementations are borrowed and must remain concurrency-safe for their use.
+
 The caller context is the total execution boundary. Policies may pass a
 shorter child context but cannot extend or detach from the caller deadline.
 The executor does not race operations against timers and does not create a
@@ -142,5 +156,7 @@ credentials, tenant IDs, or caller-provided maps.
 - [Migration](docs/migration.md)
 - [Performance](docs/performance.md)
 - [FAQ](docs/faq.md)
-- [Security policy](SECURITY.md)
-- [Release notes](CHANGELOG.md)
+- [Support](SUPPORT.md)
+- [Security policy and reporting guidance](SECURITY.md)
+- [Compatibility policy](COMPATIBILITY.md)
+- [Release history](CHANGELOG.md)
