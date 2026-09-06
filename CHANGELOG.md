@@ -16,6 +16,10 @@
 
 ### Documentation
 
+- Complete the sole-package map, executable error-handling examples,
+  troubleshooting guidance, direct private security route, compatibility
+  wording, and documentation gate coverage.
+
 - Add canonical v1 installation, stable Go support, lifecycle and ownership,
   project support, and security-reporting guidance.
 
@@ -25,7 +29,7 @@
 - Replace obsolete repository links and completed execution artifacts with a
   standalone, human-oriented documentation structure.
 
-## 1.0.0 - 2026-08-25
+## 1.0.0 - 2026-08-26
 
 ### Changed
 
