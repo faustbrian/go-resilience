@@ -15,9 +15,9 @@ regression under active development.
 ## Reporting a vulnerability
 
 Do not disclose a suspected vulnerability in a public issue. Use the
-repository's private security reporting facility when available. If private
-reporting is unavailable, ask a maintainer for a private contact channel
-without disclosing the vulnerability.
+[private vulnerability report](https://github.com/faustbrian/go-resilience/security/advisories/new).
+If private reporting is unavailable, ask a maintainer for a private contact
+channel without disclosing the vulnerability.
 
 Do not place credentials, customer data, production identifiers, or exploit
 payloads in a public report, initial contact request, fixture, event, benchmark,

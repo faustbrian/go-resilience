@@ -29,6 +29,16 @@ The module is a stable v1 public library. It requires Go 1.26.6 or newer.
 go get github.com/faustbrian/go-resilience@v1
 ```
 
+## Package map
+
+- [`github.com/faustbrian/go-resilience`](https://pkg.go.dev/github.com/faustbrian/go-resilience)
+  is the stable public package for policy composition, outcomes, observation,
+  and shared work budgets.
+
+The repository has no nested modules or public subpackages. Focused algorithms
+such as retry, hedge, circuit breaking, and concurrency limiting remain in
+their independently versioned Golib repositories.
+
 ## Quick start
 
 ```go
@@ -77,11 +87,25 @@ budget, err := resilience.NewBudget(resilience.BudgetConfig{
     PermitTTL:                    30 * time.Second,
     Clock:                        clock,
 })
+if err != nil {
+    return err
+}
 scope, budgetContext, err := budget.Start(ctx, metadata)
-defer scope.Close()
+if err != nil {
+    return err
+}
+defer func() {
+    if closeErr := scope.Close(); closeErr != nil {
+        log.Printf("close resilience budget: %v", closeErr)
+    }
+}()
 
 result := executor.Execute(budgetContext, metadata, operation)
+return result.Err
 ```
+
+The deferred close is required even when execution panics; replace the example
+logging with the application's cleanup-error reporting policy.
 
 The terminal stage admits every physical attempt centrally. Original work is
 recorded once; retry and hedge attempts draw from the same per-execution,
