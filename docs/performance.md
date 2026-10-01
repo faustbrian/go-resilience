@@ -3,11 +3,14 @@
 Benchmarks compare semantically equivalent synchronous successful calls:
 
 - a direct function baseline;
-- Failsafe-Go v0.9.6 with no policies;
+- Failsafe-Go v0.9.7 with no policies;
 - `resilience` with no policies;
 - two pass-through policies;
 - bounded observation; and
 - work-budget admission and completion.
+
+The current comparator version is v0.9.7. The dated August report below
+used v0.9.6; its recorded results are not measurements of v0.9.7.
 
 The no-policy path intentionally retains no timeline and creates no operation
 goroutine. The [2026-08-02 Darwin arm64 report](benchmarks/2026-08-02-darwin-arm64.md)
