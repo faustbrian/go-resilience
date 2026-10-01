@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Changed
+
+- Keep reusable CI and its checked-out tooling on the same v1.8.4 source
+  while retaining the checksum-verified v1.4.0 CLI bootstrap.
+
 ### Maintenance
 
 - Adopt the checksum-verified `go-library-tools` v1.4.0 CLI and immutable W14
