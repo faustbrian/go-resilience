@@ -14,7 +14,8 @@ event recorder. A budget mutex owns resource, scope, and permit accounting.
 Observer callbacks run after recorder mutation and without the budget lock.
 Operation execution remains on the caller goroutine.
 
-The policy API builds a finite wrapper chain, so there is no registry or graph
-edge through which a composition cycle can be introduced. Construction rejects
-nil policies, typed nils, invalid identities, incompatible duplicates, invalid
-scope order, descriptor panic, wrapper panic, and nil stages.
+The policy API builds a wrapper chain capped by `MaxPolicies`, so there is no
+registry or graph edge through which a composition cycle can be introduced.
+Construction rejects nil policies, typed nils, invalid identities, incompatible
+duplicates, invalid scope order, descriptor panic, wrapper panic, and nil
+stages.

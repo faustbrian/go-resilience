@@ -10,7 +10,8 @@
 ## Package map
 
 - The [root package](https://pkg.go.dev/github.com/faustbrian/go-resilience)
-  is the sole stable public package. It owns explicit policy composition,
+  is the historical v1 public package. The sole root v2 source package uses
+  the `/v2` module suffix. It owns explicit policy composition,
   outcome classification, bounded observation, and shared retry-plus-hedge
   work budgets.
 - There are no nested modules or public subpackages. Focused resilience
@@ -27,6 +28,7 @@
 
 - [Kubernetes](kubernetes.md)
 - [Operations](operations.md)
+- [Versioned threat model](threat-model.md)
 - [Performance](performance.md)
 - [Security policy and reporting guidance](../SECURITY.md)
 - [Support](../SUPPORT.md)

@@ -2,6 +2,25 @@
 
 ## Unreleased
 
+### Security
+
+- Bound executor composition, budget configuration, and retained logical
+  scopes so workload cardinality cannot grow package-owned state without a
+  hard ceiling. Scope ownership still requires explicit `Close`.
+- Classify only direct context and budget errors without invoking arbitrary
+  error methods. Wrapped and joined errors retain their causes but classify
+  as operation failure; wrapped budget reasons are not extracted.
+- Invoke caller-provided budget clocks outside the accounting lock to permit
+  callback re-entry, and look up context scope attachment outside that lock.
+- Reject control or malformed bytes in configured identities and sanitize
+  bounded error and event fields. Operation error values remain caller-owned.
+
+### Changed
+
+- Introduce the `/v2` source contract with hard configuration limits and
+  direct-only classification; released v1 remains unchanged. Publication and
+  direct-consumer migration remain required before security closure.
+
 ## 1.1.0 - 2026-10-01
 
 ### Changed

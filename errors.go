@@ -3,6 +3,9 @@ package resilience
 import (
 	"errors"
 	"fmt"
+	"strings"
+	"unicode"
+	"unicode/utf8"
 )
 
 var (
@@ -82,5 +85,32 @@ func (err *PolicyExecutionError) Unwrap() []error {
 }
 
 func bounded(value string) string {
-	return value[:min(len(value), MaxIdentityLength)]
+	candidate := value[:min(len(value), MaxIdentityLength)]
+	if utf8.ValidString(candidate) && printable(candidate) {
+		return candidate
+	}
+	var safe strings.Builder
+	safe.Grow(len(candidate))
+	for len(value) > 0 && safe.Len() < MaxIdentityLength {
+		character, size := utf8.DecodeRuneInString(value)
+		value = value[size:]
+		if character == utf8.RuneError && size == 1 || !unicode.IsPrint(character) {
+			character = '_'
+		}
+		encoded := utf8.RuneLen(character)
+		if encoded < 0 || safe.Len()+encoded > MaxIdentityLength {
+			break
+		}
+		safe.WriteRune(character)
+	}
+	return safe.String()
+}
+
+func printable(value string) bool {
+	for _, character := range value {
+		if !unicode.IsPrint(character) {
+			return false
+		}
+	}
+	return true
 }

@@ -6,7 +6,7 @@
       "module_directory": ".",
       "directory": ".",
       "name": "resilience",
-      "import_path": "github.com/faustbrian/go-resilience",
+      "import_path": "github.com/faustbrian/go-resilience/v2",
       "kind": "public",
       "production": true,
       "executable": true,

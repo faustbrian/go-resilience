@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/faustbrian/go-resilience"
+	"github.com/faustbrian/go-resilience/v2"
 )
 
 type zeroClock struct{}
@@ -23,6 +23,12 @@ func (panickingWrapPolicy) Descriptor() resilience.PolicyDescriptor {
 func (panickingWrapPolicy) Wrap(resilience.Stage[int]) resilience.Stage[int] { panic("wrap") }
 
 type invalidResultPolicy struct{}
+
+type hostileClassifierError struct{}
+
+func (hostileClassifierError) Error() string { return "hostile" }
+func (hostileClassifierError) Is(error) bool { panic("untrusted Is invoked") }
+func (hostileClassifierError) As(any) bool   { panic("untrusted As invoked") }
 
 func (invalidResultPolicy) Descriptor() resilience.PolicyDescriptor {
 	return resilience.PolicyDescriptor{ID: "invalid-result", Scope: resilience.ScopeLogical}
@@ -45,6 +51,7 @@ func TestBudgetConfigurationRejectsEveryUnboundedDimension(t *testing.T) {
 		field  string
 	}{
 		{name: "resources", mutate: func(config *resilience.BudgetConfig) { config.MaxResources = 0 }, field: "max_resources"},
+		{name: "scopes", mutate: func(config *resilience.BudgetConfig) { config.MaxScopes = -1 }, field: "max_scopes"},
 		{name: "execution", mutate: func(config *resilience.BudgetConfig) { config.MaxAdditionalPerExecution = 0 }, field: "max_additional_per_execution"},
 		{name: "concurrent", mutate: func(config *resilience.BudgetConfig) { config.MaxConcurrentAdditional = 0 }, field: "max_concurrent_additional"},
 		{name: "window count", mutate: func(config *resilience.BudgetConfig) { config.MaxAdditionalPerWindow = 0 }, field: "max_additional_per_window"},
@@ -62,6 +69,53 @@ func TestBudgetConfigurationRejectsEveryUnboundedDimension(t *testing.T) {
 				t.Fatalf("error = %#v", err)
 			}
 		})
+	}
+}
+
+func TestBudgetConfigurationRejectsExcessiveRetentionBounds(t *testing.T) {
+	t.Parallel()
+
+	clock := &manualClock{now: time.Unix(1, 0)}
+	valid := validBudgetConfig(clock)
+	tests := []struct {
+		name   string
+		mutate func(*resilience.BudgetConfig)
+		field  string
+	}{
+		{name: "resources", mutate: func(config *resilience.BudgetConfig) { config.MaxResources = 1_000_001 }, field: "max_resources"},
+		{name: "scopes", mutate: func(config *resilience.BudgetConfig) { config.MaxScopes = 1_000_001 }, field: "max_scopes"},
+		{name: "execution", mutate: func(config *resilience.BudgetConfig) { config.MaxAdditionalPerExecution = 1_000_001 }, field: "max_additional_per_execution"},
+		{name: "concurrent", mutate: func(config *resilience.BudgetConfig) { config.MaxConcurrentAdditional = 1_000_001 }, field: "max_concurrent_additional"},
+		{name: "window", mutate: func(config *resilience.BudgetConfig) { config.MaxAdditionalPerWindow = 1_000_001 }, field: "max_additional_per_window"},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			config := valid
+			test.mutate(&config)
+			_, err := resilience.NewBudget(config)
+			var configuration *resilience.ConfigurationError
+			if !errors.As(err, &configuration) || configuration.Field != test.field || !errors.Is(err, resilience.ErrInvalidComposition) {
+				t.Fatalf("error = %#v", err)
+			}
+		})
+	}
+}
+
+func TestExecutorDoesNotInvokeUntrustedErrorClassifiers(t *testing.T) {
+	t.Parallel()
+
+	executor, err := resilience.NewExecutor[int]()
+	if err != nil {
+		t.Fatal(err)
+	}
+	result := executor.Execute(context.Background(), metadataFor(t, "hostile", "resource"), func(context.Context, resilience.Attempt) (int, error) {
+		return 0, hostileClassifierError{}
+	})
+	if result.Outcome.Kind != resilience.OutcomeOperationFailure {
+		t.Fatalf("outcome = %s", result.Outcome.Kind)
+	}
+	if reason := resilience.RejectionReasonOf(hostileClassifierError{}); reason != "" {
+		t.Fatalf("rejection reason = %q", reason)
 	}
 }
 
@@ -231,5 +285,35 @@ func TestLocalAndPolicyErrorsRemainSafeWithoutCauses(t *testing.T) {
 	var policyError *resilience.PolicyExecutionError
 	if !errors.Is(policy.Err, resilience.ErrPolicyFailure) || !errors.As(policy.Err, &policyError) || len(policyError.Policy) != resilience.MaxIdentityLength || len(policyError.Stage) != resilience.MaxIdentityLength || policy.Err.Error() == "" {
 		t.Fatalf("policy = %#v", policy.Err)
+	}
+}
+
+func TestDiagnosticIdentitiesRejectOrSanitizeControlBytes(t *testing.T) {
+	t.Parallel()
+
+	if _, err := resilience.NewMetadata("logical\nforged", "lookup", "resource"); !errors.Is(err, resilience.ErrInvalidMetadata) {
+		t.Fatalf("metadata error = %v", err)
+	}
+	if _, err := resilience.NewExecutor[string](recordingPolicy{id: "retry\nforged", scope: resilience.ScopeLogical}); !errors.Is(err, resilience.ErrInvalidComposition) {
+		t.Fatalf("policy error = %v", err)
+	}
+	attempt, err := resilience.NewAttempt(1, resilience.OriginOriginal, 0, time.Unix(5, 0))
+	if err != nil {
+		t.Fatalf("new attempt: %v", err)
+	}
+	rejection := resilience.LocalRejection[int](attempt, "bulkhead\nforged", "full\tforged", nil)
+	var rejectionError *resilience.LocalRejectionError
+	if !errors.As(rejection.Err, &rejectionError) || strings.ContainsAny(string(rejectionError.Policy), "\r\n\t") || strings.ContainsAny(rejectionError.Reason, "\r\n\t") {
+		t.Fatalf("unsafe rejection = %#v", rejection.Err)
+	}
+	ignored := resilience.Ignored[int](attempt, "skip\rforged")
+	var ignoredError *resilience.IgnoredError
+	if !errors.As(ignored.Err, &ignoredError) || strings.ContainsAny(ignoredError.Reason, "\r\n\t") {
+		t.Fatalf("unsafe ignored error = %#v", ignored.Err)
+	}
+	failure := resilience.PolicyFailure[int](attempt, "retry\nforged", "classify\tforged", nil)
+	var policyError *resilience.PolicyExecutionError
+	if !errors.As(failure.Err, &policyError) || strings.ContainsAny(string(policyError.Policy), "\r\n\t") || strings.ContainsAny(policyError.Stage, "\r\n\t") {
+		t.Fatalf("unsafe policy error = %#v", failure.Err)
 	}
 }

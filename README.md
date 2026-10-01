@@ -21,19 +21,27 @@ vocabulary, see the versioned
 [Golib ecosystem index](https://github.com/faustbrian/go-library-tools/blob/v1.4.0/docs/ecosystem/README.md)
 and its [Resilience family](https://github.com/faustbrian/go-library-tools/blob/v1.4.0/docs/ecosystem/design-language.md#package-families-and-selection).
 
-The module is a stable v1 public library. It requires Go 1.27.0 or newer.
+This source tree defines the v2 security contract. Public tags and releases
+establish which versions are published; source changes alone do not establish
+consumer adoption. Historical v1 remains a distinct module identity. The
+module requires Go 1.27.0 or newer, without sibling `replace` directives.
 
 ## Install
+
+Choose an actual published version. The historical v1 installation is:
 
 ```sh
 go get github.com/faustbrian/go-resilience@v1
 ```
 
+V2 uses `github.com/faustbrian/go-resilience/v2`; adopt it only from a published
+v2 tag and upgrade the focused executors used in shared-budget compositions.
+
 ## Package map
 
 - [`github.com/faustbrian/go-resilience`](https://pkg.go.dev/github.com/faustbrian/go-resilience)
-  is the stable public package for policy composition, outcomes, observation,
-  and shared work budgets.
+  is the historical v1 public package. The root v2 source package uses the
+  `/v2` suffix for policy composition, outcomes, observation, and work budgets.
 
 The repository has no nested modules or public subpackages. Focused algorithms
 such as retry, hedge, circuit breaking, and concurrency limiting remain in
@@ -77,9 +85,14 @@ attempt-scoped policy only once.
 
 Retry and hedge must use the same `WorkBudgetScope` for a logical call:
 
+The following budget configuration targets the v2 source API.
+Released v1 does not provide `MaxScopes`; current v1-bound focused executors
+also require their own compatible upgrade before accepting a v2 scope.
+
 ```go
 budget, err := resilience.NewBudget(resilience.BudgetConfig{
     MaxResources:                 1_024,
+    MaxScopes:                    8_192,
     MaxAdditionalPerExecution:    2,
     MaxConcurrentAdditional:      100,
     MaxAdditionalPerWindow:       1_000,
@@ -160,6 +173,9 @@ The common taxonomy is:
 Constructors preserve typed values and causes. Errors remain usable through
 `errors.Is` and `errors.As`; error strings contain only bounded policy, stage,
 and reason identifiers.
+
+V2 classifies only direct context sentinels and direct budget rejection values.
+It never invokes arbitrary `Is` or `As` methods while determining an outcome.
 
 ## Diagnostics
 
