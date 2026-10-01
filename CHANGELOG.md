@@ -2,7 +2,15 @@
 
 ## Unreleased
 
+## 1.1.0 - 2026-10-01
+
 ### Changed
+
+- Require Go 1.27.0 or newer. Upgrade the toolchain before adopting this
+  release; the exported API and runtime contracts remain unchanged.
+- Update the benchmark-only Failsafe-Go comparator to v0.9.7. Its upstream
+  budget API changes can affect applications that consume Failsafe directly
+  when Go selects the newer module version.
 
 - Keep reusable CI and its checked-out tooling on the same v1.8.4 source
   while retaining the checksum-verified v1.4.0 CLI bootstrap.
