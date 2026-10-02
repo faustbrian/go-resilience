@@ -19,6 +19,12 @@ Do not disclose a suspected vulnerability in a public issue. Use the
 If private reporting is unavailable, ask a maintainer for a private contact
 channel without disclosing the vulnerability.
 
+The shared [vulnerability-management process][reporting-process] defines
+severity, acknowledgement targets, remediation, embargo, and coordinated
+advisory publication. The supported-version policy above remains unchanged.
+
+[reporting-process]: https://github.com/faustbrian/go-library-tools/blob/main/docs/ecosystem/security/vulnerability-management.md
+
 Do not place credentials, customer data, production identifiers, or exploit
 payloads in a public report, initial contact request, fixture, event, benchmark,
 or mutation report.
