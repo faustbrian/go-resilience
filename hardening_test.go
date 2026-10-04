@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/faustbrian/go-resilience"
+	"github.com/faustbrian/go-resilience/v2"
 )
 
 func TestBudgetConcurrentAdmissionNeverExceedsConfiguredCapacity(t *testing.T) {

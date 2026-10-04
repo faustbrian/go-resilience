@@ -6,7 +6,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/faustbrian/go-resilience"
+	"github.com/faustbrian/go-resilience/v2"
 )
 
 func TestGeneratedPolicyStacksMatchReferenceInvocationOrder(t *testing.T) {

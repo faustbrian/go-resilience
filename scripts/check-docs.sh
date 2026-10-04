@@ -122,7 +122,7 @@ for path in checked:
 print("documentation links, anchors, and error handling resolve")
 PY
 
-go doc github.com/faustbrian/go-resilience >/dev/null
+go doc github.com/faustbrian/go-resilience/v2 >/dev/null
 
 example_count="$(grep -Ec '^func Example[[:alnum:]_]*\(\)' example_test.go)"
 output_count="$(grep -Ec '^[[:space:]]*// Output: .+' example_test.go)"

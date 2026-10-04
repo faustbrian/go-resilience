@@ -10,12 +10,23 @@ Use `errors.Is` for stable categories and `errors.As` for bounded details:
 - `ErrPermitCompleted` and `ErrPermitExpired`.
 
 `ConfigurationError`, `LocalRejectionError`, `PolicyExecutionError`, and
-`BudgetRejectionError` expose safe fields. Error strings deliberately omit the
-arbitrary cause. The original cause remains available through `errors.Is` and
+package-produced `BudgetRejectionError` expose bounded operational fields.
+Core wrapper error strings deliberately omit the arbitrary cause; externally
+constructed errors or secret-valued identifiers are not a redaction service.
+The original cause remains available through `errors.Is` and
 `errors.As`.
 
+V2 outcome classification compares only direct `context.Canceled` and
+`context.DeadlineExceeded` values. `RejectionReasonOf` accepts only a direct
+`*BudgetRejectionError`. These rules prevent arbitrary, cyclic, panicking, or
+blocking error methods from executing inside the library. Wrapped operation
+errors remain preserved as `Result.Err` but are classified as operation
+failures.
+
 Events identify execution, policy, admission, attempt, cancellation, and
-completion transitions. Identity and reason strings are bounded to 128 bytes.
+completion transitions. Identity and reason strings are printable and bounded
+to 128 bytes; diagnostic constructors replace control or malformed bytes, while
+configuration constructors reject them.
 Events do not retain results or arbitrary errors. A timeline is caller-owned
 and bounded; modifying one result timeline cannot affect an executor or later
 call. `EventExecutionCanceled` records both caller cancellation and total

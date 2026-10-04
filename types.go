@@ -2,7 +2,6 @@ package resilience
 
 import (
 	"context"
-	"errors"
 	"time"
 )
 
@@ -73,7 +72,7 @@ func NewMetadata(logicalID, operation, resource string) (Metadata, error) {
 			return Metadata{}, invalid(ErrInvalidMetadata, identity.field, "must not be blank")
 		}
 		if bounded(identity.value) != identity.value {
-			return Metadata{}, invalid(ErrInvalidMetadata, identity.field, "exceeds maximum length")
+			return Metadata{}, invalid(ErrInvalidMetadata, identity.field, "must be bounded printable text")
 		}
 	}
 	return Metadata{logicalID: logicalID, operation: operation, resource: resource}, nil
@@ -142,9 +141,9 @@ func resultFrom[T any](value T, err error, attempt Attempt) Result[T] {
 	kind := OutcomeSuccess
 	if err != nil {
 		switch {
-		case errors.Is(err, context.Canceled):
+		case err == context.Canceled:
 			kind = OutcomeCancellation
-		case errors.Is(err, context.DeadlineExceeded):
+		case err == context.DeadlineExceeded:
 			kind = OutcomeDeadline
 		default:
 			kind = OutcomeOperationFailure

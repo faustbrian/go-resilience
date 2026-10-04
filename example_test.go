@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/faustbrian/go-resilience"
+	"github.com/faustbrian/go-resilience/v2"
 )
 
 func ExampleExecutor() {

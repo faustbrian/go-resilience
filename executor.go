@@ -7,6 +7,9 @@ import (
 	"time"
 )
 
+// MaxPolicies bounds composition-time work and retained policy metadata.
+const MaxPolicies = 64
+
 // PolicyID is a bounded stable policy identity used by errors and diagnostics.
 type PolicyID string
 
@@ -77,6 +80,9 @@ type Executor[T any] struct {
 
 // NewExecutor validates policies and composes them in outer-to-inner order.
 func NewExecutor[T any](policies ...Policy[T]) (Executor[T], error) {
+	if len(policies) > MaxPolicies {
+		return Executor[T]{}, invalid(ErrInvalidComposition, "policies", "exceeds maximum count")
+	}
 	descriptors := make([]PolicyDescriptor, 0, len(policies))
 	seen := make(map[PolicyID]PolicyDescriptor, len(policies))
 	attemptScopeSeen := false
@@ -89,7 +95,7 @@ func NewExecutor[T any](policies ...Policy[T]) (Executor[T], error) {
 			return Executor[T]{}, err
 		}
 		if descriptor.ID == "" {
-			return Executor[T]{}, invalid(ErrInvalidComposition, "policy_id", "must be bounded and non-empty")
+			return Executor[T]{}, invalid(ErrInvalidComposition, "policy_id", "must be bounded printable text")
 		}
 		if PolicyID(bounded(string(descriptor.ID))) != descriptor.ID {
 			return Executor[T]{}, invalid(ErrInvalidComposition, "policy_id", "must be bounded and non-empty")
