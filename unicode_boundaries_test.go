@@ -50,8 +50,8 @@ func TestUnicodeNonPrintableBoundaries(t *testing.T) {
 				rejection := LocalRejection[int](attempt, PolicyID(label), label, cause)
 				failure := PolicyFailure[int](attempt, PolicyID(label), label, cause)
 				ignored := Ignored[int](attempt, label)
-				fields := []string{string(rejection.Err.(*LocalRejectionError).Policy), rejection.Err.(*LocalRejectionError).Reason,
-					string(failure.Err.(*PolicyExecutionError).Policy), failure.Err.(*PolicyExecutionError).Stage, ignored.Err.(*IgnoredError).Reason}
+				fields := []string{string(rejection.Err.(*LocalRejectionError).Policy), rejection.Err.(*LocalRejectionError).Reason, //nolint:errorlint // These factories return the direct owned error types; the oracle inspects their exact fields.
+					string(failure.Err.(*PolicyExecutionError).Policy), failure.Err.(*PolicyExecutionError).Stage, ignored.Err.(*IgnoredError).Reason} //nolint:errorlint // Preserve direct factory-type inspection rather than traversing an error chain.
 				for _, field := range fields {
 					if field != "before_after" {
 						t.Errorf("diagnostic field=%q want sanitized replacement", field)
@@ -118,7 +118,7 @@ func TestUnicodePrintableTextAndByteBoundary(t *testing.T) {
 	attempt, _ := NewAttempt(1, OriginOriginal, 0, time.Unix(1, 0))
 	cause := errors.New("operation\u202e diagnostic")
 	result := Failure(0, cause, attempt)
-	if result.Err != cause || result.Err.Error() != "operation\u202e diagnostic" {
+	if result.Err != cause || result.Err.Error() != "operation\u202e diagnostic" { //nolint:errorlint // The public contract preserves the exact caller error unchanged, not merely an equivalent cause.
 		t.Fatal("raw operation error changed")
 	}
 }

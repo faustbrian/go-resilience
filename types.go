@@ -140,10 +140,10 @@ type Result[T any] struct {
 func resultFrom[T any](value T, err error, attempt Attempt) Result[T] {
 	kind := OutcomeSuccess
 	if err != nil {
-		switch {
-		case err == context.Canceled:
+		switch { //nolint:staticcheck // Keep the direct-identity classification cases explicit, without traversing caller errors.
+		case err == context.Canceled: //nolint:errorlint // Wrapped or joined cancellation remains an operation failure; do not invoke caller Is or Unwrap hooks.
 			kind = OutcomeCancellation
-		case err == context.DeadlineExceeded:
+		case err == context.DeadlineExceeded: //nolint:errorlint // Only this direct standard sentinel qualifies; do not traverse caller errors.
 			kind = OutcomeDeadline
 		default:
 			kind = OutcomeOperationFailure

@@ -185,7 +185,7 @@ func TestSecurityClockReentryDoesNotHoldAccountingLock(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			scope := public.(*BudgetScope)
+			scope := public.(*BudgetScope) //nolint:forcetypeassert // Successful Start on this concrete Budget fixture returns its owned BudgetScope.
 			t.Cleanup(func() { clock.scope = nil; _ = scope.Close() })
 			if path == "rejection" {
 				attempt, _ := NewAttempt(1, OriginOriginal, 0, clock.Now())
@@ -232,8 +232,8 @@ func TestSecurityDirectErrorClassification(t *testing.T) {
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			result := Failure(0, test.err, attempt)
-			if result.Err != test.err || result.Outcome.Kind != test.want {
-				t.Fatalf("kind=%s want=%s raw error preserved=%v", result.Outcome.Kind, test.want, result.Err == test.err)
+			if result.Err != test.err || result.Outcome.Kind != test.want { //nolint:errorlint // This oracle requires preservation of the exact original error, not wrapped equivalence.
+				t.Fatalf("kind=%s want=%s raw error preserved=%v", result.Outcome.Kind, test.want, result.Err == test.err) //nolint:errorlint // Report the same exact-identity oracle without traversing the error.
 			}
 		})
 	}

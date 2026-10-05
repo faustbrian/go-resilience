@@ -114,7 +114,7 @@ func (err *BudgetRejectionError) Unwrap() error { return ErrBudgetRejected }
 
 // RejectionReasonOf extracts a bounded reason or returns the empty value.
 func RejectionReasonOf(err error) RejectionReason {
-	if rejection, ok := err.(*BudgetRejectionError); ok && rejection != nil {
+	if rejection, ok := err.(*BudgetRejectionError); ok && rejection != nil { //nolint:errorlint // Only direct admission errors qualify; do not invoke caller As or Unwrap hooks.
 		return rejection.Reason
 	}
 	return ""

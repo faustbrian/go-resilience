@@ -169,7 +169,7 @@ func TestBudgetClockRunsOutsideAccountingLock(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	scope := publicScope.(*BudgetScope)
+	scope := publicScope.(*BudgetScope) //nolint:forcetypeassert // Successful Start on this concrete Budget fixture returns its owned BudgetScope.
 	var underLock atomic.Bool
 	clock.onNow = func() {
 		if !budget.mu.TryLock() {
