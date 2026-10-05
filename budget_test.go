@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/faustbrian/go-resilience"
+	"github.com/faustbrian/go-resilience/v2"
 )
 
 type manualClock struct {
@@ -272,6 +272,35 @@ func TestBudgetRollingWindowAndResourceCardinalityAreBounded(t *testing.T) {
 	}
 	if err := scopeB.Close(); err != nil {
 		t.Fatalf("close second scope: %v", err)
+	}
+}
+
+func TestBudgetBoundsRetainedLogicalScopes(t *testing.T) {
+	t.Parallel()
+
+	clock := &manualClock{now: time.Unix(1, 0)}
+	config := validBudgetConfig(clock)
+	config.MaxScopes = 1
+	budget, err := resilience.NewBudget(config)
+	if err != nil {
+		t.Fatalf("new budget: %v", err)
+	}
+	first, _, err := budget.Start(context.Background(), metadataFor(t, "logical-a", "resource"))
+	if err != nil {
+		t.Fatalf("start first scope: %v", err)
+	}
+	if _, _, err := budget.Start(context.Background(), metadataFor(t, "logical-b", "resource")); resilience.RejectionReasonOf(err) != resilience.ReasonScopeLimit {
+		t.Fatalf("second scope error = %v", err)
+	}
+	if err := first.Close(); err != nil {
+		t.Fatalf("close first scope: %v", err)
+	}
+	second, _, err := budget.Start(context.Background(), metadataFor(t, "logical-b", "resource"))
+	if err != nil {
+		t.Fatalf("start replacement scope: %v", err)
+	}
+	if err := second.Close(); err != nil {
+		t.Fatalf("close replacement scope: %v", err)
 	}
 }
 

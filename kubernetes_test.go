@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/faustbrian/go-resilience"
+	"github.com/faustbrian/go-resilience/v2"
 )
 
 func TestReplicaLocalBudgetsMultiplyClusterCapacity(t *testing.T) {

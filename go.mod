@@ -1,4 +1,4 @@
-module github.com/faustbrian/go-resilience
+module github.com/faustbrian/go-resilience/v2
 
 go 1.27.0
 

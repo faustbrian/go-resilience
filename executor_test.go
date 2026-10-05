@@ -4,11 +4,12 @@ import (
 	"context"
 	"errors"
 	"reflect"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/faustbrian/go-resilience"
+	"github.com/faustbrian/go-resilience/v2"
 )
 
 type recordingPolicy struct {
@@ -142,6 +143,21 @@ func TestExecutorRejectsInvalidCompositionsBeforeExecution(t *testing.T) {
 				t.Fatalf("error = %v", err)
 			}
 		})
+	}
+}
+
+func TestExecutorRejectsExcessivePolicyComposition(t *testing.T) {
+	t.Parallel()
+
+	order := []string{}
+	policies := make([]resilience.Policy[string], 65)
+	for index := range policies {
+		policies[index] = recordingPolicy{
+			id: resilience.PolicyID("policy-" + strconv.Itoa(index)), scope: resilience.ScopeLogical, order: &order,
+		}
+	}
+	if _, err := resilience.NewExecutor[string](policies...); !errors.Is(err, resilience.ErrInvalidComposition) {
+		t.Fatalf("error = %v", err)
 	}
 }
 
