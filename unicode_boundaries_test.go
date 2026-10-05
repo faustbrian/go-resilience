@@ -50,7 +50,7 @@ func TestUnicodeNonPrintableBoundaries(t *testing.T) {
 				rejection := LocalRejection[int](attempt, PolicyID(label), label, cause)
 				failure := PolicyFailure[int](attempt, PolicyID(label), label, cause)
 				ignored := Ignored[int](attempt, label)
-				fields := []string{string(rejection.Err.(*LocalRejectionError).Policy), rejection.Err.(*LocalRejectionError).Reason, //nolint:errorlint // These factories return the direct owned error types; the oracle inspects their exact fields.
+				fields := []string{string(rejection.Err.(*LocalRejectionError).Policy), rejection.Err.(*LocalRejectionError).Reason, //nolint:errorlint,forcetypeassert // These factories return the direct owned error types; the oracle inspects their exact fields.
 					string(failure.Err.(*PolicyExecutionError).Policy), failure.Err.(*PolicyExecutionError).Stage, ignored.Err.(*IgnoredError).Reason} //nolint:errorlint // Preserve direct factory-type inspection rather than traversing an error chain.
 				for _, field := range fields {
 					if field != "before_after" {
