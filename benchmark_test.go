@@ -59,26 +59,34 @@ func BenchmarkExecutionComposition(b *testing.B) {
 	}
 }
 
-func BenchmarkBudgetAdmission(b *testing.B) {
+func BenchmarkBudgetAdmissionLifecycle(b *testing.B) {
 	clock := &manualClock{now: time.Unix(1, 0)}
 	config := validBudgetConfig(clock)
-	config.MaxAdditionalPerExecution = 10_000_000
+	config.MaxResources = 1
+	config.MaxScopes = 1
+	config.MaxAdditionalPerExecution = 1
 	config.MaxConcurrentAdditional = 1
-	config.MaxAdditionalPerWindow = 10_000_000
-	budget, err := resilience.NewBudget(config)
-	if err != nil {
-		b.Fatal(err)
-	}
-	scope, ctx, err := budget.Start(context.Background(), metadataFor(b, "benchmark", "resource"))
-	if err != nil {
-		b.Fatal(err)
-	}
-	admitOriginal(ctx, b, scope, clock.Now())
-	b.ReportAllocs()
-	b.ResetTimer()
-	ordinal := uint64(2)
-	for b.Loop() {
-		attempt, attemptErr := resilience.NewAttempt(ordinal, resilience.OriginRetry, 1, clock.Now())
+	config.MaxAdditionalPerWindow = 1
+	metadata := metadataFor(b, "benchmark", "resource")
+	// Each measured iteration owns a finite one-retry budget and closes its
+	// scope. Construction, original admission, retry admission/completion and
+	// close are included: this is not comparable to the old admission-only cost.
+	run := func() {
+		budget, err := resilience.NewBudget(config)
+		if err != nil {
+			b.Fatal(err)
+		}
+		scope, ctx, err := budget.Start(context.Background(), metadata)
+		if err != nil {
+			b.Fatal(err)
+		}
+		defer func() {
+			if closeErr := scope.Close(); closeErr != nil {
+				b.Fatal(closeErr)
+			}
+		}()
+		admitOriginal(ctx, b, scope, clock.Now())
+		attempt, attemptErr := resilience.NewAttempt(2, resilience.OriginRetry, 1, clock.Now())
 		if attemptErr != nil {
 			b.Fatal(attemptErr)
 		}
@@ -89,10 +97,9 @@ func BenchmarkBudgetAdmission(b *testing.B) {
 		if completeErr := permit.Complete(); completeErr != nil {
 			b.Fatal(completeErr)
 		}
-		ordinal++
 	}
-	b.StopTimer()
-	if err := scope.Close(); err != nil {
-		b.Fatal(err)
+	b.ReportAllocs()
+	for b.Loop() {
+		run()
 	}
 }
