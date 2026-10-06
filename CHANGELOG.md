@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+### Maintenance
+
+- Update the benchmark-only Failsafe-Go comparator to v0.9.8. Resilience's
+  production implementation is unchanged. Applications also importing
+  Failsafe can select this version through Go's module graph; its expanded
+  bulkhead and circuit-breaker builder interfaces may require additional
+  methods in custom implementations or mocks.
+
 ## 2.0.0
 
 Prepared release metadata; public tags and releases establish publication.
