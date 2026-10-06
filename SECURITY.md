@@ -2,14 +2,18 @@
 
 ## Supported versions
 
-The latest stable v1 release receives security fixes. Older releases and the
-`main` branch are unsupported; upgrade before reporting unless the issue is a
-regression under active development.
+The latest release of the latest stable major receives security fixes. The
+latest stable v1 release remains supported until v2 is published as a stable
+release. After stable v2 publication, v1 is historical and unsupported. Older
+releases, older majors, and the `main` branch are unsupported; upgrade before
+reporting unless the issue is a regression under active development.
 
 | Version | Supported |
 | --- | --- |
-| Latest stable v1 release | Yes |
-| Older releases | No |
+| Latest release of the latest stable major | Yes |
+| Latest stable v1 release before stable v2 publication | Yes |
+| v1 after stable v2 publication | No |
+| Other older releases and majors | No |
 | `main` | No |
 
 ## Reporting a vulnerability
