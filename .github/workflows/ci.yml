@@ -13,26 +13,162 @@ on:
         required: false
         default: false
         type: boolean
+      root_release_qualification:
+        description: Qualify the root release with the pinned source-built verifier
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
   security-events: write
 
 jobs:
+  release-inputs:
+    name: Validate release selection
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Reject combined qualification selectors
+        env:
+          ROOT_QUALIFICATION: ${{ inputs.root_release_qualification || false }}
+          RELEASE_DRY_RUN: ${{ inputs.release_dry_run || false }}
+        run: |
+          set -euo pipefail
+          if [[ "${ROOT_QUALIFICATION}" == true && "${RELEASE_DRY_RUN}" == true ]]; then
+            echo 'root_release_qualification cannot be combined with release_dry_run' >&2
+            exit 1
+          fi
+
   ci:
+    needs: release-inputs
     uses: faustbrian/go-library-tools/.github/workflows/library-ci.yml@13d685e06cd4f01990eb95a4590ea67953a0c753 # v1.8.4
     with:
       tooling_sha: 13d685e06cd4f01990eb95a4590ea67953a0c753
       release_dry_run: ${{ inputs.release_dry_run || false }}
 
+  root-release-qualification:
+    name: Root release qualification
+    if: github.event_name == 'workflow_dispatch' && inputs.root_release_qualification
+    needs: [release-inputs, ci]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    permissions:
+      contents: read
+    env:
+      GOENV: 'off'
+      GOWORK: 'off'
+      GOTOOLCHAIN: local
+      GOMAXPROCS: '2'
+      GOFLAGS: -p=1
+      GOPROXY: https://proxy.golang.org
+      GOSUMDB: sum.golang.org
+      GOPRIVATE: ''
+      GONOPROXY: ''
+      GONOSUMDB: ''
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+          path: source
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: faustbrian/go-library-tools
+          ref: c799f67c5f4ac074e24a0172fb41a96cce9dad8e
+          persist-credentials: false
+          path: tooling
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: source/.go-version
+          cache: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24.4.1'
+          package-manager-cache: false
+      - name: Prepare private qualification workspace
+        run: |
+          set -euo pipefail
+          task="$(mktemp -d "${RUNNER_TEMP}/resilience-root-qualification.XXXXXX")"
+          {
+            echo "QUALIFICATION_TASK=${task}"
+            echo "GOCACHE=${task}/cache"
+            echo "GOMODCACHE=${task}/mod"
+            echo "GOTMPDIR=${task}/tmp"
+            echo "TMPDIR=${task}/tmp"
+            echo "GOLANGCI_LINT_CACHE=${task}/lint"
+            echo "XDG_CACHE_HOME=${task}/xdg"
+          } >>"${GITHUB_ENV}"
+          mkdir -p "${task}/cache" "${task}/mod" "${task}/tmp" "${task}/lint" "${task}/xdg"
+      - name: Build exact source tooling without a release identity
+        working-directory: tooling
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = c799f67c5f4ac074e24a0172fb41a96cce9dad8e
+          go build -trimpath -buildvcs=false -o "${QUALIFICATION_TASK}/golib" ./cmd/golib
+          test "$("${QUALIFICATION_TASK}/golib" --version)" = dev
+      - name: Qualify the complete root release contract
+        working-directory: source
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
+          git rev-parse HEAD 'HEAD^{tree}'
+          git -C ../tooling rev-parse HEAD 'HEAD^{tree}'
+          "${QUALIFICATION_TASK}/golib" repository check
+          "${QUALIFICATION_TASK}/golib" specification check
+          "${QUALIFICATION_TASK}/golib" release check --module .
+          "${QUALIFICATION_TASK}/golib" release dry-run --module .
+      - name: Retain native root release evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: root-release-qualification
+          path: source/.verification
+          if-no-files-found: error
+          include-hidden-files: true
+          retention-days: 30
+      - name: Remove private qualification resources
+        if: always()
+        run: |
+          set -euo pipefail
+          if [[ -n "${QUALIFICATION_TASK:-}" ]]; then
+            case "${QUALIFICATION_TASK}" in
+              "${RUNNER_TEMP}"/resilience-root-qualification.*) ;;
+              *) echo 'unexpected qualification workspace' >&2; exit 1 ;;
+            esac
+            if [[ -d "${QUALIFICATION_TASK}" ]]; then
+              chmod -R u+w "${QUALIFICATION_TASK}"
+              find "${QUALIFICATION_TASK}" -depth -delete
+            fi
+            test ! -e "${QUALIFICATION_TASK}"
+          fi
+          for target in "${GITHUB_WORKSPACE}/source" "${GITHUB_WORKSPACE}/tooling"; do
+            if [[ -d "${target}" ]]; then
+              chmod -R u+w "${target}"
+              find "${target}" -depth -delete
+            fi
+            test ! -e "${target}"
+          done
+
   required:
     name: Required
     if: always()
-    needs: ci
+    needs: [release-inputs, ci, root-release-qualification]
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
       - name: Require shared workflow
         env:
           CI_RESULT: ${{ needs.ci.result }}
-        run: test "${CI_RESULT}" = success
+          INPUT_RESULT: ${{ needs.release-inputs.result }}
+          ROOT_QUALIFICATION: ${{ inputs.root_release_qualification || false }}
+          QUALIFICATION_RESULT: ${{ needs.root-release-qualification.result }}
+        run: |
+          set -euo pipefail
+          test "${INPUT_RESULT}" = success
+          test "${CI_RESULT}" = success
+          if [[ "${ROOT_QUALIFICATION}" == true ]]; then
+            test "${QUALIFICATION_RESULT}" = success
+          else
+            test "${QUALIFICATION_RESULT}" = skipped
+          fi

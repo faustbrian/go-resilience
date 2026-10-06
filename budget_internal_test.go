@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"math"
+	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -135,3 +136,50 @@ func TestCompletingLastPermitImmediatelyReleasesClosedScope(t *testing.T) {
 type internalClock struct{ now time.Time }
 
 func (clock *internalClock) Now() time.Time { return clock.now }
+
+type lockProbeClock struct {
+	now   time.Time
+	onNow func()
+}
+
+func (clock *lockProbeClock) Now() time.Time {
+	if clock.onNow != nil {
+		clock.onNow()
+	}
+	return clock.now
+}
+
+func TestBudgetClockRunsOutsideAccountingLock(t *testing.T) {
+	t.Parallel()
+
+	clock := &lockProbeClock{now: time.Unix(1, 0)}
+	budget, err := NewBudget(BudgetConfig{
+		MaxResources: 1, MaxAdditionalPerExecution: 1,
+		MaxConcurrentAdditional: 1, MaxAdditionalPerWindow: 1,
+		AdditionalWindow: time.Minute, PermitTTL: time.Minute, Clock: clock,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	metadata, err := NewMetadata("logical", "operation", "resource")
+	if err != nil {
+		t.Fatal(err)
+	}
+	publicScope, _, err := budget.Start(context.Background(), metadata)
+	if err != nil {
+		t.Fatal(err)
+	}
+	scope := publicScope.(*BudgetScope) //nolint:forcetypeassert // Successful Start on this concrete Budget fixture returns its owned BudgetScope.
+	var underLock atomic.Bool
+	clock.onNow = func() {
+		if !budget.mu.TryLock() {
+			underLock.Store(true)
+			return
+		}
+		budget.mu.Unlock()
+	}
+	_ = scope.Snapshot()
+	if underLock.Load() {
+		t.Fatal("Clock.Now ran while the budget accounting lock was held")
+	}
+}

@@ -10,8 +10,14 @@ The built-in budget enforces:
 - a finite additional-attempt total per logical execution;
 - a finite number of concurrent additional attempts per resource;
 - a finite rolling-window additional-attempt count per resource;
-- a finite number of retained resource identities; and
+- a finite number of retained resource identities;
+- a finite number of simultaneously retained logical scopes; and
 - permit expiry that lazily recovers abandoned capacity.
+
+`MaxResources` and each attempt dimension cannot exceed
+`MaxBudgetResources` and `MaxBudgetAttempts`. `MaxScopes` cannot exceed
+`MaxBudgetScopes`; zero selects `DefaultMaxBudgetScopes`. Scope saturation
+fails closed with `ReasonScopeLimit` until an existing scope is released.
 
 Totals and rolling admissions are not refunded. Concurrent capacity is
 released exactly once by `Permit.Complete` or recovered at `PermitTTL`.
@@ -25,7 +31,8 @@ detached context, a foreign scope, mismatched execution metadata, duplicate
 ordinal, missing original, or unknown parent is rejected before operation
 invocation.
 
-Clocks are injected for deterministic tests. The process-local implementation
+Clocks are injected for deterministic tests and are called outside the budget
+accounting lock. The process-local implementation
 does not persist accounting across restart and does not coordinate replicas.
 Custom process-local or distributed implementations attach their scope with
 `WithBudgetScope`; the context key remains private so callers cannot replace a

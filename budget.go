@@ -26,6 +26,17 @@ var (
 	ErrPermitExpired = errors.New("resilience: permit expired")
 )
 
+const (
+	// MaxBudgetResources bounds retained process-local resource identities.
+	MaxBudgetResources = 1_000_000
+	// MaxBudgetScopes bounds simultaneously retained logical executions.
+	MaxBudgetScopes = 1_000_000
+	// DefaultMaxBudgetScopes is used when BudgetConfig.MaxScopes is zero.
+	DefaultMaxBudgetScopes = 65_536
+	// MaxBudgetAttempts bounds each configured attempt-retention dimension.
+	MaxBudgetAttempts = 1_000_000
+)
+
 // RejectionReason identifies the bounded admission rule that denied work.
 type RejectionReason string
 
@@ -38,6 +49,8 @@ const (
 	ReasonWindowLimit RejectionReason = "window_limit"
 	// ReasonResourceLimit denies creation of a new bounded resource identity.
 	ReasonResourceLimit RejectionReason = "resource_limit"
+	// ReasonScopeLimit denies creation of a new bounded logical scope.
+	ReasonScopeLimit RejectionReason = "scope_limit"
 	// ReasonDuplicateWork denies a physical attempt already admitted by the scope.
 	ReasonDuplicateWork RejectionReason = "duplicate_work"
 	// ReasonOriginalRequired denies additional work before the original attempt.
@@ -48,7 +61,9 @@ const (
 
 // BudgetConfig defines finite process-local amplification limits.
 type BudgetConfig struct {
-	MaxResources              int
+	MaxResources int
+	// MaxScopes defaults to DefaultMaxBudgetScopes when zero.
+	MaxScopes                 int
 	MaxAdditionalPerExecution uint64
 	MaxConcurrentAdditional   uint64
 	MaxAdditionalPerWindow    uint64
@@ -99,7 +114,7 @@ func (err *BudgetRejectionError) Unwrap() error { return ErrBudgetRejected }
 
 // RejectionReasonOf extracts a bounded reason or returns the empty value.
 func RejectionReasonOf(err error) RejectionReason {
-	if rejection, ok := errors.AsType[*BudgetRejectionError](err); ok {
+	if rejection, ok := err.(*BudgetRejectionError); ok && rejection != nil { //nolint:errorlint // Only direct admission errors qualify; do not invoke caller As or Unwrap hooks.
 		return rejection.Reason
 	}
 	return ""
@@ -121,21 +136,25 @@ type Budget struct {
 
 // NewBudget validates finite limits and constructs an empty process-local budget.
 func NewBudget(config BudgetConfig) (*Budget, error) {
+	if config.MaxScopes == 0 {
+		config.MaxScopes = DefaultMaxBudgetScopes
+	}
 	checks := []struct {
 		field string
 		valid bool
 	}{
-		{"max_resources", config.MaxResources > 0},
-		{"max_additional_per_execution", config.MaxAdditionalPerExecution > 0},
-		{"max_concurrent_additional", config.MaxConcurrentAdditional > 0},
-		{"max_additional_per_window", config.MaxAdditionalPerWindow > 0},
+		{"max_resources", config.MaxResources > 0 && config.MaxResources <= MaxBudgetResources},
+		{"max_scopes", config.MaxScopes > 0 && config.MaxScopes <= MaxBudgetScopes},
+		{"max_additional_per_execution", config.MaxAdditionalPerExecution > 0 && config.MaxAdditionalPerExecution <= MaxBudgetAttempts},
+		{"max_concurrent_additional", config.MaxConcurrentAdditional > 0 && config.MaxConcurrentAdditional <= MaxBudgetAttempts},
+		{"max_additional_per_window", config.MaxAdditionalPerWindow > 0 && config.MaxAdditionalPerWindow <= MaxBudgetAttempts},
 		{"additional_window", config.AdditionalWindow > 0},
 		{"permit_ttl", config.PermitTTL > 0},
 		{"clock", !nilInterface(config.Clock)},
 	}
 	for _, check := range checks {
 		if !check.valid {
-			return nil, invalid(ErrInvalidComposition, check.field, "must be positive and configured")
+			return nil, invalid(ErrInvalidComposition, check.field, "must be within supported bounds")
 		}
 	}
 	return &Budget{config: config, resources: make(map[string]*resourceBudget), scopes: make(map[*BudgetScope]struct{})}, nil
@@ -168,6 +187,10 @@ func (budget *Budget) Start(ctx context.Context, metadata Metadata) (WorkBudgetS
 	budget.mu.Lock()
 	defer budget.mu.Unlock()
 	budget.reapLocked(now)
+	if len(budget.scopes) >= budget.config.MaxScopes {
+		snapshot := BudgetSnapshot{LogicalID: metadata.logicalID, Resource: metadata.resource}
+		return nil, nil, &BudgetRejectionError{Reason: ReasonScopeLimit, Snapshot: snapshot}
+	}
 	resource := budget.resources[metadata.resource]
 	if resource == nil {
 		if len(budget.resources) >= budget.config.MaxResources {
@@ -336,6 +359,9 @@ func (scope *BudgetScope) Acquire(ctx context.Context, attempt Attempt) (Permit,
 	if _, err := NewAttempt(attempt.Ordinal, attempt.Origin, attempt.ParentOrdinal, attempt.StartedAt); err != nil {
 		return nil, err
 	}
+	// Context attachment is immutable; custom Value implementations must not run
+	// while the accounting lock is held. Check closed state before mismatch below.
+	attached, ok := BudgetScopeFromContext(ctx)
 	now := scope.budget.config.Clock.Now()
 	scope.budget.mu.Lock()
 	defer scope.budget.mu.Unlock()
@@ -343,29 +369,28 @@ func (scope *BudgetScope) Acquire(ctx context.Context, attempt Attempt) (Permit,
 	if scope.closed {
 		return nil, ErrBudgetClosed
 	}
-	attached, ok := BudgetScopeFromContext(ctx)
 	if !ok || attached != scope {
 		return nil, ErrBudgetScopeMismatch
 	}
 	if _, exists := scope.ordinals[attempt.Ordinal]; exists {
-		return nil, scope.rejectionLocked(ReasonDuplicateWork)
+		return nil, scope.rejectionLocked(ReasonDuplicateWork, now)
 	}
 	if attempt.Origin != OriginOriginal {
 		if _, exists := scope.ordinals[1]; !exists {
-			return nil, scope.rejectionLocked(ReasonOriginalRequired)
+			return nil, scope.rejectionLocked(ReasonOriginalRequired, now)
 		}
 		if _, exists := scope.ordinals[attempt.ParentOrdinal]; !exists {
-			return nil, scope.rejectionLocked(ReasonUnknownParent)
+			return nil, scope.rejectionLocked(ReasonUnknownParent, now)
 		}
 		if scope.additionalAdmitted >= scope.budget.config.MaxAdditionalPerExecution {
-			return nil, scope.rejectionLocked(ReasonExecutionLimit)
+			return nil, scope.rejectionLocked(ReasonExecutionLimit, now)
 		}
 		scope.budget.pruneWindowLocked(scope.resource, now)
 		if uint64(len(scope.resource.recentAdditional)) >= scope.budget.config.MaxAdditionalPerWindow {
-			return nil, scope.rejectionLocked(ReasonWindowLimit)
+			return nil, scope.rejectionLocked(ReasonWindowLimit, now)
 		}
 		if scope.resource.activeAdditional >= scope.budget.config.MaxConcurrentAdditional {
-			return nil, scope.rejectionLocked(ReasonConcurrentLimit)
+			return nil, scope.rejectionLocked(ReasonConcurrentLimit, now)
 		}
 	}
 
@@ -381,8 +406,8 @@ func (scope *BudgetScope) Acquire(ctx context.Context, attempt Attempt) (Permit,
 	return permit, nil
 }
 
-func (scope *BudgetScope) rejectionLocked(reason RejectionReason) error {
-	return &BudgetRejectionError{Reason: reason, Snapshot: scope.snapshotLocked()}
+func (scope *BudgetScope) rejectionLocked(reason RejectionReason, now time.Time) error {
+	return &BudgetRejectionError{Reason: reason, Snapshot: scope.snapshotLocked(now)}
 }
 
 func (scope *BudgetScope) reapLocked(now time.Time) {
@@ -408,8 +433,8 @@ func (scope *BudgetScope) releaseLocked() {
 	delete(scope.budget.scopes, scope)
 }
 
-func (scope *BudgetScope) snapshotLocked() BudgetSnapshot {
-	scope.budget.pruneWindowLocked(scope.resource, scope.budget.config.Clock.Now())
+func (scope *BudgetScope) snapshotLocked(now time.Time) BudgetSnapshot {
+	scope.budget.pruneWindowLocked(scope.resource, now)
 	active := uint64(0)
 	for _, permit := range scope.permits {
 		if permit.additional {
@@ -428,10 +453,11 @@ func (scope *BudgetScope) snapshotLocked() BudgetSnapshot {
 
 // Snapshot reaps expired permits and returns bounded accounting state.
 func (scope *BudgetScope) Snapshot() BudgetSnapshot {
+	now := scope.budget.config.Clock.Now()
 	scope.budget.mu.Lock()
 	defer scope.budget.mu.Unlock()
-	scope.reapLocked(scope.budget.config.Clock.Now())
-	return scope.snapshotLocked()
+	scope.reapLocked(now)
+	return scope.snapshotLocked(now)
 }
 
 // Matches reports whether this scope owns the supplied immutable metadata.
@@ -441,13 +467,14 @@ func (scope *BudgetScope) Matches(metadata Metadata) bool {
 
 // Close rejects new work and releases resource identity after active permits settle.
 func (scope *BudgetScope) Close() error {
+	now := scope.budget.config.Clock.Now()
 	scope.budget.mu.Lock()
 	defer scope.budget.mu.Unlock()
 	if scope.closed {
 		return ErrBudgetClosed
 	}
 	scope.closed = true
-	scope.reapLocked(scope.budget.config.Clock.Now())
+	scope.reapLocked(now)
 	if len(scope.permits) == 0 {
 		scope.releaseLocked()
 	}

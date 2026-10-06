@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/faustbrian/go-resilience"
+	"github.com/faustbrian/go-resilience/v2"
 )
 
 type collectingObserver struct {
@@ -377,7 +377,7 @@ func TestRetryPolicyUsesTheSameCentralBudgetScope(t *testing.T) {
 func TestExecutionBoundsEventsAndDetachedCancellation(t *testing.T) {
 	t.Parallel()
 
-	longReason := strings.Repeat("x", resilience.MaxIdentityLength+1)
+	longReason := "\n" + strings.Repeat("x", resilience.MaxIdentityLength)
 	observer := &collectingObserver{}
 	executor, err := resilience.NewExecutor[string](emittingPolicy{kind: resilience.EventKind(longReason), policy: resilience.PolicyID(longReason), reason: longReason}, nilContextPolicy{})
 	if err != nil {
@@ -396,6 +396,9 @@ func TestExecutionBoundsEventsAndDetachedCancellation(t *testing.T) {
 	events := observer.Events()
 	if len(events[1].Kind) != resilience.MaxIdentityLength || len(events[1].Policy) != resilience.MaxIdentityLength || len(events[1].Reason) != resilience.MaxIdentityLength {
 		t.Fatalf("bounded event identity = (%d, %d, %d)", len(events[1].Kind), len(events[1].Policy), len(events[1].Reason))
+	}
+	if strings.ContainsAny(string(events[1].Kind), "\r\n\t") || strings.ContainsAny(string(events[1].Policy), "\r\n\t") || strings.ContainsAny(events[1].Reason, "\r\n\t") {
+		t.Fatalf("unsafe event identity = %+v", events[1])
 	}
 
 	total, cancel := context.WithCancel(context.Background())

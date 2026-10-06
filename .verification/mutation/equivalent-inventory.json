@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "packages": [
+    {
+      "module_directory": ".",
+      "package_directory": ".",
+      "source_digest": "59797e3026603f034762a368c5ebe1e3754647fcd3816db556c1f8e3e9b67964",
+      "gremlins_version": "v0.6.0",
+      "gremlins_verifier_sha256": "c28707fd4ce35dd228260de564107c1fb7726e42d4e9ea2bf9e988083e1f3b5b",
+      "mutations": [
+        {
+          "file_name": "budget.go",
+          "type": "CONDITIONALS_BOUNDARY",
+          "line": 147,
+          "column": 35,
+          "contract_domain": "Public NewBudget validation after zero MaxScopes is normalized to a positive finite default",
+          "reason": "Changing > to >= differs only at zero, which is replaced by positive DefaultMaxBudgetScopes before this check. Negative and positive inputs retain the same public result. Independently reviewed by postgres_safe_config_v2_final_review on 2026-10-04 at e73d93a01a168ab2f2768934fe7d942d20134fc5; expires 2027-01-02 or earlier on zero-default/admission changes. Native LIVED status is retained."
+        },
+        {
+          "file_name": "errors.go",
+          "type": "CONDITIONALS_BOUNDARY",
+          "line": 94,
+          "column": 35,
+          "contract_domain": "Public bounded error metadata and executor observations under the unchanged 128-byte retained identity limit",
+          "reason": "Changing < to <= permits an extra private iteration when the builder has 128 bytes. Every decoded or sanitized rune needs at least one byte, so the unchanged line 101 guard breaks before appending; returned metadata is identical. Independently reviewed by postgres_safe_config_v2_final_review on 2026-10-04 at e73d93a01a168ab2f2768934fe7d942d20134fc5; expires 2027-01-02 or earlier on builder boundary/append or UTF-8 changes. Native LIVED status is retained."
+        },
+        {
+          "file_name": "errors.go",
+          "type": "CONDITIONALS_BOUNDARY",
+          "line": 101,
+          "column": 14,
+          "contract_domain": "Public bounded error metadata for UTF-8 decoded or replacement runes, preserving existing error classifications",
+          "reason": "Changing < to <= has no differing reachable operand: utf8.RuneLen never returns zero, and the decoded or replacement rune provenance makes its encoded length positive. Independently reviewed by postgres_safe_config_v2_final_review on 2026-10-04 at e73d93a01a168ab2f2768934fe7d942d20134fc5; expires 2027-01-02 or earlier on rune provenance or UTF-8 changes. Native LIVED status is retained."
+        }
+      ]
+    }
+  ]
+}
