@@ -21,7 +21,8 @@ vocabulary, see the versioned
 [Golib ecosystem index](https://github.com/faustbrian/go-library-tools/blob/v1.4.0/docs/ecosystem/README.md)
 and its [Resilience family](https://github.com/faustbrian/go-library-tools/blob/v1.4.0/docs/ecosystem/design-language.md#package-families-and-selection).
 
-The supported stable release is [v2.0.1](https://github.com/faustbrian/go-resilience/releases/tag/v2.0.1).
+The supported stable major is v2; see the
+[published releases](https://github.com/faustbrian/go-resilience/releases).
 Source changes alone do not establish consumer adoption. Historical v1
 remains an immutable, unsupported, distinct module identity. The
 module requires Go 1.27.0 or newer, without sibling `replace` directives.
