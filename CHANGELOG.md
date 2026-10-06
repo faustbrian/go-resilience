@@ -1,6 +1,10 @@
 # Changelog
 
-## Unreleased
+## 2.0.0
+
+Prepared release metadata; public tags and releases establish publication.
+Public release and maintained-consumer adoption remain separate requirements
+before security closure.
 
 ### Security
 
@@ -18,8 +22,10 @@
 ### Changed
 
 - Introduce the `/v2` source contract with hard configuration limits and
-  direct-only classification; released v1 remains unchanged. Publication and
-  direct-consumer migration remain required before security closure.
+  direct-only classification; released v1 remains unchanged. Migrate imports
+  to `/v2` and use compatible focused executors for shared-budget composition.
+  Publication and direct-consumer migration remain required before security
+  closure.
 
 ## 1.1.0 - 2026-10-01
 
