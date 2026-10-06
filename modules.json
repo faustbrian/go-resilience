@@ -37,7 +37,7 @@
         "github.com/faustbrian/go-concurrency-limit/integration/resilience",
         "github.com/faustbrian/go-fault-injection/integration/resilience",
         "github.com/faustbrian/go-hedge",
-        "github.com/faustbrian/go-retry",
+        "github.com/faustbrian/go-retry/v2",
         "github.com/faustbrian/go-service/integration/adoption",
         "github.com/faustbrian/go-service/integration/reference-external"
       ],

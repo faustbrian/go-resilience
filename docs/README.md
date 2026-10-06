@@ -5,15 +5,15 @@
 - [Install and quick start](../README.md#install)
 - [API](api.md)
 - [Executable examples](../example_test.go)
-- [Package API](https://pkg.go.dev/github.com/faustbrian/go-resilience)
+- [Package API](https://pkg.go.dev/github.com/faustbrian/go-resilience/v2)
 
 ## Package map
 
-- The [root package](https://pkg.go.dev/github.com/faustbrian/go-resilience)
-  is the historical v1 public package. The sole root v2 source package uses
-  the `/v2` module suffix. It owns explicit policy composition,
+- The [root package](https://pkg.go.dev/github.com/faustbrian/go-resilience/v2)
+  uses the `/v2` module suffix. It owns explicit policy composition,
   outcome classification, bounded observation, and shared retry-plus-hedge
   work budgets.
+- Historical v1 retains its unsuffixed module identity and is unsupported.
 - There are no nested modules or public subpackages. Focused resilience
   algorithms remain independently versioned companion libraries.
 
