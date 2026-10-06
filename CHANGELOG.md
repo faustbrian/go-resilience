@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 2.0.1 - 2026-10-06
 
 ### Maintenance
 
@@ -9,6 +9,10 @@
   Failsafe can select this version through Go's module graph; its expanded
   bulkhead and circuit-breaker builder interfaces may require additional
   methods in custom implementations or mocks.
+
+- Align installation, support, and focused-executor guidance with the
+  published v2 module identity, and correct the Retry v2 consumer
+  inventory. Consumer adoption remains separate from source publication.
 
 ## 2.0.0
 

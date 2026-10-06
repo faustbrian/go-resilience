@@ -21,7 +21,8 @@ vocabulary, see the versioned
 [Golib ecosystem index](https://github.com/faustbrian/go-library-tools/blob/v1.4.0/docs/ecosystem/README.md)
 and its [Resilience family](https://github.com/faustbrian/go-library-tools/blob/v1.4.0/docs/ecosystem/design-language.md#package-families-and-selection).
 
-The supported stable release is [v2.0.0](https://github.com/faustbrian/go-resilience/releases/tag/v2.0.0).
+The supported stable major is v2; see the
+[published releases](https://github.com/faustbrian/go-resilience/releases).
 Source changes alone do not establish consumer adoption. Historical v1
 remains an immutable, unsupported, distinct module identity. The
 module requires Go 1.27.0 or newer, without sibling `replace` directives.
@@ -31,7 +32,7 @@ module requires Go 1.27.0 or newer, without sibling `replace` directives.
 Install the supported published major:
 
 ```sh
-go get github.com/faustbrian/go-resilience/v2@v2.0.0
+go get github.com/faustbrian/go-resilience/v2@v2.0.1
 ```
 
 Shared-budget compositions require compatible focused executors: published
@@ -43,7 +44,8 @@ Resilience import does not migrate a v1-bound executor.
 
 - [`github.com/faustbrian/go-resilience/v2`](https://pkg.go.dev/github.com/faustbrian/go-resilience/v2)
   owns policy composition, outcomes, observation, and work budgets. Historical
-  v1 remains available at the unsuffixed module path but is unsupported.
+  v1 remains available at the module path without a major-version suffix
+  but is unsupported.
 
 The repository has no nested modules or public subpackages. Focused algorithms
 such as retry, hedge, circuit breaking, and concurrency limiting remain in
