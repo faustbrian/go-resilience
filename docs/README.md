@@ -13,7 +13,8 @@
   uses the `/v2` module suffix. It owns explicit policy composition,
   outcome classification, bounded observation, and shared retry-plus-hedge
   work budgets.
-- Historical v1 retains its unsuffixed module identity and is unsupported.
+- Historical v1 retains its module identity without a major-version suffix
+  and is unsupported.
 - There are no nested modules or public subpackages. Focused resilience
   algorithms remain independently versioned companion libraries.
 

@@ -43,7 +43,8 @@ Resilience import does not migrate a v1-bound executor.
 
 - [`github.com/faustbrian/go-resilience/v2`](https://pkg.go.dev/github.com/faustbrian/go-resilience/v2)
   owns policy composition, outcomes, observation, and work budgets. Historical
-  v1 remains available at the unsuffixed module path but is unsupported.
+  v1 remains available at the module path without a major-version suffix
+  but is unsupported.
 
 The repository has no nested modules or public subpackages. Focused algorithms
 such as retry, hedge, circuit breaking, and concurrency limiting remain in
