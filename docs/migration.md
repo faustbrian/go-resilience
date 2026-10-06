@@ -1,8 +1,7 @@
 # Migration
 
-The v2 source contract uses `github.com/faustbrian/go-resilience/v2`.
-Public tags and releases establish publication. When adopting a published
-v2 version, migrate imports to `/v2`,
+The published v2.0.0 contract uses `github.com/faustbrian/go-resilience/v2`.
+Migrate imports to `/v2`,
 set `BudgetConfig.MaxScopes` when the default is not appropriate, and verify
 that wrapped context and budget errors use direct-only v2 classification.
 Configured metadata and policy identities must contain printable text;
@@ -10,8 +9,10 @@ diagnostic error and event constructors sanitize control and malformed bytes.
 
 V1 and v2 scope and attempt context keys are distinct. V1-bound retry
 and hedge executors cannot consume a v2 scope by changing only this import.
-Upgrade to explicitly compatible focused executors before migrating an active
-shared-budget composition; retain historical v1 tests as historical variants.
+Published Retry v2.1.0 and Hedge v1.1.0 explicitly consume v2 scopes while
+retaining their v1 routes. Upgrade those focused executors before migrating
+an active shared-budget composition; retain historical v1 tests as historical
+variants. Contexts carrying both scope versions are rejected before dispatch.
 
 ## v1.1.0
 

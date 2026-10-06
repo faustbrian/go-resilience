@@ -1,9 +1,9 @@
 # API reference
 
-The released-v1 canonical generated reference is:
+The supported v2 canonical generated reference is:
 
 ```sh
-go doc -all github.com/faustbrian/go-resilience
+go doc -all github.com/faustbrian/go-resilience/v2
 ```
 
 Primary entry points:

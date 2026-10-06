@@ -5,7 +5,7 @@
 [![Coverage](https://img.shields.io/badge/coverage-100%25_required-blue)](CONTRIBUTING.md#verification)
 [![Mutation](https://img.shields.io/badge/mutation-100%25_required-blue)](CONTRIBUTING.md#verification)
 [![Documentation](https://img.shields.io/badge/docs-checked_in_CI-blue)](docs/)
-[![Go Reference](https://pkg.go.dev/badge/github.com/faustbrian/go-resilience.svg)](https://pkg.go.dev/github.com/faustbrian/go-resilience)
+[![Go Reference](https://pkg.go.dev/badge/github.com/faustbrian/go-resilience/v2.svg)](https://pkg.go.dev/github.com/faustbrian/go-resilience/v2)
 [![Release](https://img.shields.io/github/v/release/faustbrian/go-resilience?sort=semver)](https://github.com/faustbrian/go-resilience/releases)
 [![Go](https://img.shields.io/badge/go-1.27.0-00ADD8?logo=go)](https://go.dev/)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
@@ -21,27 +21,29 @@ vocabulary, see the versioned
 [Golib ecosystem index](https://github.com/faustbrian/go-library-tools/blob/v1.4.0/docs/ecosystem/README.md)
 and its [Resilience family](https://github.com/faustbrian/go-library-tools/blob/v1.4.0/docs/ecosystem/design-language.md#package-families-and-selection).
 
-This source tree defines the v2 security contract. Public tags and releases
-establish which versions are published; source changes alone do not establish
-consumer adoption. Historical v1 remains a distinct module identity. The
+The supported stable release is [v2.0.0](https://github.com/faustbrian/go-resilience/releases/tag/v2.0.0).
+Source changes alone do not establish consumer adoption. Historical v1
+remains an immutable, unsupported, distinct module identity. The
 module requires Go 1.27.0 or newer, without sibling `replace` directives.
 
 ## Install
 
-Choose an actual published version. The historical v1 installation is:
+Install the supported published major:
 
 ```sh
-go get github.com/faustbrian/go-resilience@v1
+go get github.com/faustbrian/go-resilience/v2@v2.0.0
 ```
 
-V2 uses `github.com/faustbrian/go-resilience/v2`; adopt it only from a published
-v2 tag and upgrade the focused executors used in shared-budget compositions.
+Shared-budget compositions require compatible focused executors: published
+Retry v2.1.0 (`github.com/faustbrian/go-retry/v2`) and Hedge v1.1.0
+(`github.com/faustbrian/go-hedge`) consume v2 scopes. Changing only the
+Resilience import does not migrate a v1-bound executor.
 
 ## Package map
 
-- [`github.com/faustbrian/go-resilience`](https://pkg.go.dev/github.com/faustbrian/go-resilience)
-  is the historical v1 public package. The root v2 source package uses the
-  `/v2` suffix for policy composition, outcomes, observation, and work budgets.
+- [`github.com/faustbrian/go-resilience/v2`](https://pkg.go.dev/github.com/faustbrian/go-resilience/v2)
+  owns policy composition, outcomes, observation, and work budgets. Historical
+  v1 remains available at the unsuffixed module path but is unsupported.
 
 The repository has no nested modules or public subpackages. Focused algorithms
 such as retry, hedge, circuit breaking, and concurrency limiting remain in
@@ -85,9 +87,9 @@ attempt-scoped policy only once.
 
 Retry and hedge must use the same `WorkBudgetScope` for a logical call:
 
-The following budget configuration targets the v2 source API.
-Released v1 does not provide `MaxScopes`; current v1-bound focused executors
-also require their own compatible upgrade before accepting a v2 scope.
+The following budget configuration targets the published v2 API.
+Historical v1 does not provide `MaxScopes`; v1-bound focused executors also
+require a compatible upgrade before accepting a v2 scope.
 
 ```go
 budget, err := resilience.NewBudget(resilience.BudgetConfig{
