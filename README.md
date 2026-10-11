@@ -3,7 +3,7 @@
 [![CI](https://github.com/faustbrian/go-resilience/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/faustbrian/go-resilience/actions/workflows/ci.yml)
 [![CodeQL](https://img.shields.io/badge/CodeQL-required-blue)](https://github.com/faustbrian/go-resilience/actions/workflows/ci.yml)
 [![Coverage](https://img.shields.io/badge/coverage-100%25_required-blue)](CONTRIBUTING.md#verification)
-[![Mutation](https://img.shields.io/badge/mutation-100%25_required-blue)](CONTRIBUTING.md#verification)
+[![Mutation](https://img.shields.io/badge/mutation-local_and_scheduled-blue)](CONTRIBUTING.md#verification)
 [![Documentation](https://img.shields.io/badge/docs-checked_in_CI-blue)](docs/)
 [![Go Reference](https://pkg.go.dev/badge/github.com/faustbrian/go-resilience/v2.svg)](https://pkg.go.dev/github.com/faustbrian/go-resilience/v2)
 [![Release](https://img.shields.io/github/v/release/faustbrian/go-resilience?sort=semver)](https://github.com/faustbrian/go-resilience/releases)
@@ -190,6 +190,7 @@ credentials, tenant IDs, or caller-provided maps.
 
 ## Documentation
 
+- [Contributor verification](CONTRIBUTING.md#verification)
 - [API reference](docs/api.md)
 - [Composition and timing](docs/composition.md)
 - [Budget accounting](docs/budgets.md)

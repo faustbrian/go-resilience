@@ -36,6 +36,7 @@
 
 ## Reference and maintenance
 
+- [Maintainer verification](operations.md#maintainer-verification)
 - [FAQ](faq.md)
 - [Migration](migration.md)
 - [Compatibility policy](../COMPATIBILITY.md)

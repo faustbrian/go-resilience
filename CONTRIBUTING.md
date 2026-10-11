@@ -2,8 +2,8 @@
 
 ## Before Editing
 
-1. Read [`AGENTS.md`](AGENTS.md) and the affected module's goals and docs.
-2. Run `make inventory` and the narrow baseline gate for the module.
+1. Read [`AGENTS.md`](AGENTS.md) and the affected package's docs.
+2. Run `go test ./...` or the affected behavior's narrower tests.
 3. Identify owned dependencies and reverse dependants in `modules.json`.
 4. Preserve unrelated work and generated/corpus provenance.
 
@@ -24,7 +24,9 @@ the affected stable decision entries, and complete the Specification Decisions
 section of the pull request template. An unresolved interpretation or stale
 source pin is release-blocking; peer behavior cannot silently select policy.
 
-Required mutation gates must finish with zero surviving viable mutants.
+Mutation is optional local or scheduled assurance, not a required PR status.
+Confirmed behavioral and security defects still require a focused regression
+and repair; equivalent/invalid mutants retain reviewed narrow dispositions.
 
 Do not add package-local workflows, permanent replacements, machine-specific
 paths, bypass flags, broad mutation exclusions, or aggregate quality metrics
@@ -32,21 +34,31 @@ that hide a failing package.
 
 ## Verification
 
-Run during development:
+Ordinary standalone verification needs no sibling checkouts or ecosystem
+ledgers. It runs deterministic tests, fuzz seeds and saved corpus regressions:
 
 ```bash
-make inventory
-make check
+go test ./...
 ```
 
-Before submitting a repository-wide change:
+With the checksum-pinned public verifier selected by `.golib.yaml`, `make check`
+and `make ci` run bounded local checks, including the named admission,
+callback-reentry and permit/scope-cleanup race assertions once with a two-minute
+timeout. CI does not build the verifier from source on the ordinary route.
+
+Select one fuzz target for short active exploration, or one package for
+optional local mutation:
 
 ```bash
-make ci
+GOMAXPROCS=2 go test -run '^$' -fuzz '^FuzzBudgetStateMachine$' -fuzztime=2s -parallel=1 -timeout=2m .
+golib mutation --module . --package .
 ```
 
-The full scheduled and release gate is `make ci`. Report every unavailable or
-failing command; do not describe partial results as release-ready.
+`make check-full` retains explicit full assurance. See the
+[maintainer verification guide](docs/operations.md#maintainer-verification)
+for affected compatibility, direct-consumer, full and release boundaries.
+Report every unavailable, skipped or failing check; a local pass is not
+hosted-CI or public-release qualification.
 
 ## Adding A Module
 
