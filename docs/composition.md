@@ -22,7 +22,8 @@ The caller context remains the total boundary even if a custom policy passes
 `context.Background()` to the next stage. Child contexts may shorten queue,
 admission, or attempt deadlines. They cannot extend the total deadline.
 
-Local denial must use `LocalRejection`; classifier, observer, or policy
-mechanism failure must use `PolicyFailure`; only an invoked downstream
+Local denial must use `LocalRejection`; classifier or policy mechanism failure
+must use `PolicyFailure`. Observer panics are recovered after the result settles
+and do not become policy failures. Only an invoked downstream
 operation may produce `OutcomeOperationFailure`. This prevents breakers and
 adaptive controls from learning from local saturation.

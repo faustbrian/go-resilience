@@ -5,16 +5,16 @@ import (
 	"time"
 )
 
-// MaxIdentityLength bounds identifiers retained by diagnostics and budgets.
+// MaxIdentityLength bounds UTF-8 identifier length in bytes, not rune count.
 const MaxIdentityLength = 128
 
 // Scope identifies how often a policy participates in an execution.
 type Scope string
 
 const (
-	// ScopeLogical applies once around the complete logical execution.
+	// ScopeLogical describes a policy around the complete logical execution.
 	ScopeLogical Scope = "logical"
-	// ScopeAttempt applies independently to each physical attempt.
+	// ScopeAttempt describes a policy around each physical attempt.
 	ScopeAttempt Scope = "attempt"
 )
 
@@ -40,9 +40,9 @@ const (
 	OutcomeOperationFailure OutcomeKind = "operation_failure"
 	// OutcomeLocalRejection identifies work denied before downstream invocation.
 	OutcomeLocalRejection OutcomeKind = "local_rejection"
-	// OutcomeCancellation identifies cooperative caller cancellation.
+	// OutcomeCancellation identifies a cancellation-classified result.
 	OutcomeCancellation OutcomeKind = "cancellation"
-	// OutcomeDeadline identifies expiration of the caller-owned total deadline.
+	// OutcomeDeadline identifies a deadline-classified result, not proof of its origin.
 	OutcomeDeadline OutcomeKind = "deadline"
 	// OutcomeIgnored identifies work intentionally omitted by a policy.
 	OutcomeIgnored OutcomeKind = "ignored"
@@ -50,14 +50,18 @@ const (
 	OutcomePolicyFailure OutcomeKind = "policy_failure"
 )
 
-// Metadata is immutable logical-execution identity safe for bounded diagnostics.
+// Metadata is validated, immutable logical-execution identity for diagnostics
+// and budget matching. Its zero value is invalid. Use operational labels, not
+// secrets: bounded printable text is not redaction or cardinality control.
 type Metadata struct {
 	logicalID string
 	operation string
 	resource  string
 }
 
-// NewMetadata validates bounded, non-empty execution identifiers.
+// NewMetadata requires each identifier to be nonempty valid UTF-8, printable
+// according to unicode.IsPrint, and at most MaxIdentityLength bytes. It neither
+// trims whitespace nor normalizes Unicode. Invalid input wraps ErrInvalidMetadata.
 func NewMetadata(logicalID, operation, resource string) (Metadata, error) {
 	identities := []struct {
 		field string
@@ -94,13 +98,20 @@ func (metadata Metadata) validate() error {
 
 // Attempt describes one physical invocation within a logical execution.
 type Attempt struct {
-	Ordinal       uint64
-	Origin        AttemptOrigin
+	// Ordinal is positive and unique within the owning logical scope.
+	Ordinal uint64
+	// Origin distinguishes original, retry and hedge work.
+	Origin AttemptOrigin
+	// ParentOrdinal is zero for original work and an earlier ordinal otherwise.
 	ParentOrdinal uint64
-	StartedAt     time.Time
+	// StartedAt is a nonzero caller-supplied attempt timestamp.
+	StartedAt time.Time
 }
 
-// NewAttempt validates stable physical-attempt lineage.
+// NewAttempt validates a nonzero timestamp and structural lineage: original work
+// has ordinal 1 and no parent; retry or hedge work has an ordinal above 1 and a
+// positive earlier parent. It does not prove uniqueness or actual parent
+// admission; BudgetScope.Acquire performs those ownership checks.
 func NewAttempt(ordinal uint64, origin AttemptOrigin, parent uint64, startedAt time.Time) (Attempt, error) {
 	if ordinal == 0 {
 		return Attempt{}, invalid(ErrInvalidAttempt, "ordinal", "must be positive")
@@ -125,16 +136,24 @@ func NewAttempt(ordinal uint64, origin AttemptOrigin, parent uint64, startedAt t
 
 // Outcome is the stable classification of a completed execution.
 type Outcome struct {
-	Kind    OutcomeKind
+	// Kind distinguishes success, operation failure and locally owned outcomes.
+	Kind OutcomeKind
+	// Attempt is the terminal attempt; early admission failures may leave it zero.
 	Attempt Attempt
 }
 
-// Result preserves the typed operation value, original error, bounded events, and outcome.
+// Result preserves the typed value, original error, outcome and optional events.
 type Result[T any] struct {
-	Value   T
-	Err     error
+	// Value is the operation or policy value; reference-valued data is not copied.
+	Value T
+	// Err preserves the error supplied by work or a policy, without redaction.
+	Err error
+	// Outcome classifies the result independently of error-chain traversal.
 	Outcome Outcome
-	Events  []Event
+	// Events is the retained timeline when enabled, truncated at its capacity.
+	// Executor-recorded timelines are caller-owned and may omit terminal events
+	// when full. Without a recorder, policy-supplied events are not copied or bounded.
+	Events []Event
 }
 
 func resultFrom[T any](value T, err error, attempt Attempt) Result[T] {
@@ -152,17 +171,22 @@ func resultFrom[T any](value T, err error, attempt Attempt) Result[T] {
 	return Result[T]{Value: value, Err: err, Outcome: Outcome{Kind: kind, Attempt: attempt}}
 }
 
-// Success constructs a successful policy result.
+// Success constructs a successful policy result without validating attempt.
 func Success[T any](value T, attempt Attempt) Result[T] {
 	return Result[T]{Value: value, Outcome: Outcome{Kind: OutcomeSuccess, Attempt: attempt}}
 }
 
-// Failure preserves an operation error and classifies context causes.
+// Failure preserves value and err without invoking error methods. Only direct
+// context.Canceled and context.DeadlineExceeded classify as cancellation and
+// deadline; wrappers and joined errors classify as operation failure. A nil err
+// yields success. The attempt is not validated here.
 func Failure[T any](value T, err error, attempt Attempt) Result[T] {
 	return resultFrom(value, err, attempt)
 }
 
-// LocalRejection constructs a local denial that remains distinct from operation failure.
+// LocalRejection constructs local denial with a zero Value and unvalidated
+// attempt. Policy and reason are sanitized to bounded printable UTF-8; cause
+// remains accessible through the error chain and is not redacted.
 func LocalRejection[T any](attempt Attempt, policy PolicyID, reason string, cause error) Result[T] {
 	return Result[T]{
 		Err:     &LocalRejectionError{Policy: PolicyID(bounded(string(policy))), Reason: bounded(reason), Cause: cause},
@@ -170,7 +194,8 @@ func LocalRejection[T any](attempt Attempt, policy PolicyID, reason string, caus
 	}
 }
 
-// Ignored constructs a deliberate no-work result.
+// Ignored constructs a deliberate no-work result with a zero Value and
+// unvalidated attempt. It sanitizes reason to bounded printable UTF-8.
 func Ignored[T any](attempt Attempt, reason string) Result[T] {
 	return Result[T]{
 		Err:     &IgnoredError{Reason: bounded(reason)},
@@ -178,7 +203,9 @@ func Ignored[T any](attempt Attempt, reason string) Result[T] {
 	}
 }
 
-// PolicyFailure constructs a failure owned by policy logic.
+// PolicyFailure constructs a policy-owned failure with a zero Value and
+// unvalidated attempt. Policy and stage are sanitized to bounded printable UTF-8;
+// cause is preserved and accessible through the error chain.
 func PolicyFailure[T any](attempt Attempt, policy PolicyID, stage string, cause error) Result[T] {
 	return Result[T]{
 		Err:     &PolicyExecutionError{Policy: PolicyID(bounded(string(policy))), Stage: bounded(stage), Cause: cause},

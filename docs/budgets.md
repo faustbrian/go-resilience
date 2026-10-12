@@ -21,15 +21,20 @@ fails closed with `ReasonScopeLimit` until an existing scope is released.
 
 Totals and rolling admissions are not refunded. Concurrent capacity is
 released exactly once by `Permit.Complete` or recovered at `PermitTTL`.
-Completion after expiry returns `ErrPermitExpired`; duplicate completion
-returns `ErrPermitCompleted`.
+Completion after expiry has been observed returns `ErrPermitExpired`; duplicate
+completion returns `ErrPermitCompleted`. `Complete` does not sample the clock,
+so TTL passage alone does not make that call report expiry.
 
 The scope must be attached by `Budget.Start`. Starting another scope from an
 already scoped context returns `ErrBudgetAlreadyAttached`, preventing nested
 executors from replacing the owner and bypassing per-execution limits. A
-detached context, a foreign scope, mismatched execution metadata, duplicate
-ordinal, missing original, or unknown parent is rejected before operation
-invocation.
+detached context or foreign scope is rejected by explicit `BudgetScope.Acquire`.
+An executor rejects mismatched attached metadata, duplicate ordinal, missing
+original or unknown parent before operation invocation. It accounts only a scope
+attached to the terminal context: a policy that replaces that context with an
+unscoped one drops budget accounting, even though total cancellation/deadline
+constraints are restored. Trusted policies must preserve the attachment by
+deriving child contexts from the supplied context.
 
 Clocks are injected for deterministic tests and are called outside the budget
 accounting lock. The process-local implementation

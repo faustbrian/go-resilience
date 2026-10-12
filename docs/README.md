@@ -36,6 +36,7 @@
 
 ## Reference and maintenance
 
+- [Source documentation audit](source-documentation-audit.md)
 - [Maintainer verification](operations.md#maintainer-verification)
 - [FAQ](faq.md)
 - [Migration](migration.md)

@@ -31,6 +31,11 @@ closed-scope error precedence and admission checks remain under the lock.
 Clock re-entry must itself terminate rather than
 recursively request another timestamp forever.
 
+Policies must preserve attached budget context values. Total-context enforcement
+restores deadline/cancellation constraints, not dropped values; a policy passing
+an unscoped context can bypass terminal budget accounting. This is a trusted
+policy boundary, not fail-closed attachment enforcement.
+
 V2 classifies only direct context sentinels and direct budget rejections.
 Wrapped/joined errors remain preserved but classify as operation failure;
 `RejectionReasonOf` does not traverse wrappers. Package-created diagnostic

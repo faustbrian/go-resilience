@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+### Documentation
+
+- Clarify explicit budget scope cleanup, lazy permit expiry versus physical
+  work, caller-owned callback concurrency, synchronous observation, direct-only
+  error classification and diagnostic ownership in source API contracts.
+  State that policy-proposed contexts must preserve budget attachment; total
+  cancellation enforcement does not restore dropped context values.
+
 ## 2.0.1 - 2026-10-06
 
 ### Maintenance

@@ -15,25 +15,43 @@ type PolicyID string
 
 // PolicyDescriptor makes ordering and execution scope inspectable.
 type PolicyDescriptor struct {
-	ID         PolicyID
-	Scope      Scope
+	// ID is nonempty printable UTF-8, at most MaxIdentityLength bytes.
+	ID PolicyID
+	// Scope controls valid outer-to-inner order, not automatic repetition.
+	Scope Scope
+	// Repeatable allows duplicate IDs only when every descriptor agrees on scope
+	// and repeatability. It does not cause the executor to retry work.
 	Repeatable bool
 }
 
-// Operation is caller-owned synchronous work for one physical attempt.
+// Operation is caller-owned synchronous work for one physical attempt. It must
+// cooperate with context cancellation; the executor cannot preempt it. Values,
+// errors and panics retain caller ownership, including their diagnostic safety.
 type Operation[T any] func(context.Context, Attempt) (T, error)
 
-// Stage is the explicit policy composition boundary.
+// Stage is the explicit policy composition boundary. A policy may invoke its
+// next stage zero or more times and must supply valid attempt lineage and a
+// consistent Result. Policies, not scope labels, implement repetition.
 type Stage[T any] func(context.Context, Execution, Operation[T]) Result[T]
 
 // Policy wraps the next stage without hidden registration or discovery.
 type Policy[T any] interface {
+	// Descriptor supplies construction-time identity, scope and repeatability.
+	// NewExecutor calls it once per policy and turns panics into configuration errors.
 	Descriptor() PolicyDescriptor
+	// Wrap returns a nonnil stage around next. It is called during construction;
+	// the returned stage and captured state must support the caller's concurrency.
+	// Descriptor/Wrap panics are caught, but execution-stage panics propagate.
 	Wrap(Stage[T]) Stage[T]
 }
 
-// Clock permits deterministic attempt and event timestamps.
+// Clock supplies attempt, event and budget timestamps. Callers own its state;
+// concurrent use requires a concurrency-safe implementation. For predictable
+// rolling windows and expiry, budget time should not move backward.
 type Clock interface {
+	// Now returns the current time; attempt creation requires a nonzero value.
+	// Budget calls occur outside its accounting lock, so reentry is possible but
+	// must terminate. Blocking or panicking clocks are not isolated.
 	Now() time.Time
 }
 
@@ -41,15 +59,21 @@ type systemClock struct{}
 
 func (systemClock) Now() time.Time { return time.Now() }
 
-// Execution is immutable call metadata passed through policy stages.
+// Execution is call metadata passed by value through policy stages. Use
+// WithAttempt to derive a copy; copies share their internal event recorder and
+// caller-total context. Constructed literals do not have those internal owners.
 type Execution struct {
+	// Metadata identifies the logical execution and must match an attached scope.
 	Metadata Metadata
+	// Attempt identifies the physical work carried by this stage invocation.
 	Attempt  Attempt
 	recorder *recorder
 	total    context.Context
 }
 
-// WithAttempt returns an execution copy for validated additional physical work.
+// WithAttempt returns a copy with structurally valid attempt metadata, preserving
+// the logical metadata, recorder and total context. It does not allocate ordinals
+// or admit work; original as well as additional attempt shapes are accepted.
 func (execution Execution) WithAttempt(attempt Attempt) (Execution, error) {
 	if _, err := NewAttempt(attempt.Ordinal, attempt.Origin, attempt.ParentOrdinal, attempt.StartedAt); err != nil {
 		return Execution{}, err
@@ -58,7 +82,10 @@ func (execution Execution) WithAttempt(attempt Attempt) (Execution, error) {
 	return execution, nil
 }
 
-// Emit records bounded diagnostic metadata without retaining results or errors.
+// Emit records diagnostic metadata when a recorder exists; otherwise it is a
+// no-op. Kind, policy and reason are sanitized to MaxIdentityLength bytes of
+// printable UTF-8. Events beyond the retained capacity are dropped. Emit does not
+// call the observer; execution delivers the retained timeline after it settles.
 func (execution Execution) Emit(kind EventKind, policy PolicyID, reason string) {
 	if execution.recorder == nil {
 		return
@@ -69,7 +96,10 @@ func (execution Execution) Emit(kind EventKind, policy PolicyID, reason string) 
 	execution.recorder.emit(Event{Kind: kind, Policy: policy, Reason: reason, LogicalID: execution.Metadata.logicalID, Attempt: execution.Attempt})
 }
 
-// Executor is an immutable, reusable policy composition.
+// Executor is a reusable policy composition constructed by NewExecutor; its
+// zero value is not ready to execute. Configuration methods return copies, but
+// those copies share policy stages, clocks and observers. Concurrent Execute
+// calls require these caller-provided collaborators to be concurrency-safe.
 type Executor[T any] struct {
 	policies  []PolicyDescriptor
 	stage     Stage[T]
@@ -78,7 +108,11 @@ type Executor[T any] struct {
 	maxEvents int
 }
 
-// NewExecutor validates policies and composes them in outer-to-inner order.
+// NewExecutor composes up to MaxPolicies policies in outer-to-inner order.
+// Logical scopes must precede attempt scopes; duplicate IDs require identical
+// scope and explicit repeatability. Nil policies/stages and Descriptor or Wrap
+// panics return errors wrapping ErrInvalidComposition. No policies yields a
+// plain executor. Policies are wrapped once, not cloned or independently owned.
 func NewExecutor[T any](policies ...Policy[T]) (Executor[T], error) {
 	if len(policies) > MaxPolicies {
 		return Executor[T]{}, invalid(ErrInvalidComposition, "policies", "exceeds maximum count")
@@ -163,7 +197,11 @@ func nilInterface(value any) bool {
 	}
 }
 
-// WithObserver returns a copy that sends at most maxEvents retained events to observer.
+// WithObserver returns a copy retaining and delivering at most maxEvents events
+// per call, with maxEvents in [1, 1024] and a nonnil observer. Delivery runs
+// synchronously after the result and built-in attempt accounting settle, outside
+// internal locks. Observer panics are recovered; blocking delays Execute return.
+// Early input validation or already-canceled calls do not produce a timeline.
 func (executor Executor[T]) WithObserver(observer Observer, maxEvents int) (Executor[T], error) {
 	if nilInterface(observer) {
 		return Executor[T]{}, invalid(ErrInvalidComposition, "observer", "must not be nil")
@@ -179,7 +217,9 @@ func (executor Executor[T]) WithObserver(observer Observer, maxEvents int) (Exec
 	return executor, nil
 }
 
-// WithTimeline returns a copy that retains at most maxEvents events per result.
+// WithTimeline returns a copy retaining the first maxEvents events per call,
+// where maxEvents is in [1, 1024]. It keeps any installed observer and changes
+// its delivery bound too; it does not create one. The default retains no events.
 func (executor Executor[T]) WithTimeline(maxEvents int) (Executor[T], error) {
 	if maxEvents < 1 {
 		return Executor[T]{}, invalid(ErrInvalidComposition, "max_events", "must be between 1 and 1024")
@@ -191,7 +231,8 @@ func (executor Executor[T]) WithTimeline(maxEvents int) (Executor[T], error) {
 	return executor, nil
 }
 
-// WithClock returns a copy using clock for attempts and event timestamps.
+// WithClock returns a copy borrowing a nonnil clock for attempts and events.
+// It does not replace the separately configured BudgetConfig.Clock.
 func (executor Executor[T]) WithClock(clock Clock) (Executor[T], error) {
 	if nilInterface(clock) {
 		return Executor[T]{}, invalid(ErrInvalidComposition, "clock", "must not be nil")
@@ -205,7 +246,18 @@ func (executor Executor[T]) Policies() []PolicyDescriptor {
 	return append([]PolicyDescriptor(nil), executor.policies...)
 }
 
-// Execute invokes synchronous work without creating an operation goroutine.
+// Execute invokes work synchronously through the composed stages. Nil context,
+// invalid metadata, nil operation or invalid policy results yield policy failures.
+// An already-canceled context returns without invoking work. The terminal stage
+// constrains a policy-proposed context to the caller's total deadline/cancellation,
+// but does not force uncooperative work to return or replace a late success.
+//
+// A scope attached to the terminal context must match metadata; each such
+// invocation acquires and completes its own permit, including on panic. Policies
+// must preserve budget context attachment: constraining total cancellation does
+// not restore dropped context values. Execute never closes the scope.
+// It propagates operation and stage panics after recording retained completion
+// events and notifying observers. Callers own recovery and scope cleanup.
 func (executor Executor[T]) Execute(ctx context.Context, metadata Metadata, operation Operation[T]) (result Result[T]) {
 	var zero T
 	if ctx == nil {

@@ -59,60 +59,99 @@ const (
 	ReasonUnknownParent RejectionReason = "unknown_parent"
 )
 
-// BudgetConfig defines finite process-local amplification limits.
+// BudgetConfig defines finite process-local amplification limits. Original work
+// requires a permit but does not consume additional-work quotas. Except for
+// MaxScopes, zero limits/durations or a nil Clock are invalid. Finite dimension
+// caps are not a memory quota; their products can retain substantial state.
 type BudgetConfig struct {
+	// MaxResources bounds retained distinct resources in [1, MaxBudgetResources].
 	MaxResources int
-	// MaxScopes defaults to DefaultMaxBudgetScopes when zero.
-	MaxScopes                 int
+	// MaxScopes bounds retained logical scopes in [1, MaxBudgetScopes]. Zero
+	// selects DefaultMaxBudgetScopes; open scopes require explicit Close.
+	MaxScopes int
+	// MaxAdditionalPerExecution bounds cumulative retry-plus-hedge admissions
+	// per scope in [1, MaxBudgetAttempts], without refunds on completion or expiry.
 	MaxAdditionalPerExecution uint64
-	MaxConcurrentAdditional   uint64
-	MaxAdditionalPerWindow    uint64
-	AdditionalWindow          time.Duration
-	PermitTTL                 time.Duration
-	Clock                     Clock
+	// MaxConcurrentAdditional bounds uncompleted, unexpired additional permits
+	// per resource in [1, MaxBudgetAttempts], across all its scopes.
+	MaxConcurrentAdditional uint64
+	// MaxAdditionalPerWindow bounds recent additional admissions per resource
+	// in [1, MaxBudgetAttempts], without refunds on completion or expiry.
+	MaxAdditionalPerWindow uint64
+	// AdditionalWindow is the positive rolling admission-history duration.
+	AdditionalWindow time.Duration
+	// PermitTTL is a positive duration from admission. Expiry is observed lazily
+	// during scope/budget use, releases accounting only and never stops work.
+	PermitTTL time.Duration
+	// Clock is borrowed for accounting timestamps and sampled outside locks.
+	Clock Clock
 }
 
 // WorkBudget is the shared admission contract consumed by retry and hedge policies.
 type WorkBudget interface {
+	// Start creates a logical owner and returns a derived context carrying it.
+	// Callers must close the returned scope on every exit path; executors do not
+	// close it for them. Custom implementations own their admission semantics.
 	Start(context.Context, Metadata) (WorkBudgetScope, context.Context, error)
 }
 
 // WorkBudgetScope owns all physical work for one logical execution.
 type WorkBudgetScope interface {
+	// Acquire admits one physical attempt using a context attached to this owner.
+	// The caller must complete each returned permit, including on panic.
 	Acquire(context.Context, Attempt) (Permit, error)
+	// Snapshot returns accounting state; custom implementations define freshness.
 	Snapshot() BudgetSnapshot
+	// Matches reports whether this owner belongs to the supplied logical metadata.
 	Matches(Metadata) bool
+	// Close rejects further admission and settles logical-scope ownership.
+	// Built-in scopes defer release until outstanding permits complete or expire.
 	Close() error
 }
 
 // Permit owns completion of one admitted physical attempt.
 type Permit interface {
+	// Complete settles ownership once; callers must handle duplicate or expired
+	// completion according to the implementation's lifecycle semantics.
 	Complete() error
 }
 
 // BudgetSnapshot is an immutable bounded accounting view.
 type BudgetSnapshot struct {
-	LogicalID          string
-	Resource           string
+	// LogicalID identifies this scope's logical execution.
+	LogicalID string
+	// Resource identifies the shared resource accounting bucket.
+	Resource string
+	// AdditionalAdmitted counts cumulative additional admissions for this scope.
 	AdditionalAdmitted uint64
-	AdditionalActive   uint64
-	AdditionalRecent   uint64
-	Closed             bool
+	// AdditionalActive counts this scope's uncompleted, unexpired additional permits.
+	AdditionalActive uint64
+	// AdditionalRecent counts rolling-window additional admissions across the resource.
+	AdditionalRecent uint64
+	// Closed reports explicit Close, not context cancellation or permit expiry.
+	Closed bool
 }
 
 // BudgetRejectionError reports local denial without classifying it as downstream failure.
 type BudgetRejectionError struct {
-	Reason   RejectionReason
+	// Reason identifies the denying admission rule.
+	Reason RejectionReason
+	// Snapshot is accounting state captured at rejection, not a live view.
 	Snapshot BudgetSnapshot
 }
 
+// Error formats the budget category and reason, not the snapshot.
 func (err *BudgetRejectionError) Error() string {
 	return fmt.Sprintf("%v: %s", ErrBudgetRejected, err.Reason)
 }
 
+// Unwrap returns ErrBudgetRejected.
 func (err *BudgetRejectionError) Unwrap() error { return ErrBudgetRejected }
 
-// RejectionReasonOf extracts a bounded reason or returns the empty value.
+// RejectionReasonOf returns Reason only for a nonnil direct *BudgetRejectionError.
+// It does not traverse wrapped/joined errors or call caller error methods; nil,
+// typed nil and all other errors return the empty value. It does not sanitize a
+// caller-constructed Reason.
 func RejectionReasonOf(err error) RejectionReason {
 	if rejection, ok := err.(*BudgetRejectionError); ok && rejection != nil { //nolint:errorlint // Only direct admission errors qualify; do not invoke caller As or Unwrap hooks.
 		return rejection.Reason
@@ -126,7 +165,10 @@ type resourceBudget struct {
 	scopes           uint64
 }
 
-// Budget owns process-local accounting shared by retry and hedge attempts.
+// Budget owns concurrency-safe process-local accounting shared by retry and
+// hedge attempts. Construct it with NewBudget; the zero value is not usable and
+// an initialized Budget must not be copied. The borrowed Clock must support
+// concurrent calls. No background reaper or distributed coordination is started.
 type Budget struct {
 	mu        sync.Mutex
 	config    BudgetConfig
@@ -134,7 +176,10 @@ type Budget struct {
 	scopes    map[*BudgetScope]struct{}
 }
 
-// NewBudget validates finite limits and constructs an empty process-local budget.
+// NewBudget copies and validates finite limits, defaults MaxScopes when zero,
+// and constructs an empty budget borrowing Clock. Invalid fields wrap
+// ErrInvalidComposition in a ConfigurationError. Limits apply per process, not
+// across replicas, and do not determine whether work is safe to retry.
 func NewBudget(config BudgetConfig) (*Budget, error) {
 	if config.MaxScopes == 0 {
 		config.MaxScopes = DefaultMaxBudgetScopes
@@ -169,7 +214,11 @@ type budgetExecutionState struct {
 	next  uint64
 }
 
-// Start creates one logical scope and attaches it to a derived context.
+// Start validates a nonnil, uncanceled context and metadata, lazily reclaims
+// expired accounting, then creates one scope attached to a derived context.
+// Already attached contexts return ErrBudgetAlreadyAttached; occupied scope or
+// resource caps return a BudgetRejectionError. Even identical metadata creates
+// distinct owners. The caller must Close the scope; cancellation does not do so.
 func (budget *Budget) Start(ctx context.Context, metadata Metadata) (WorkBudgetScope, context.Context, error) {
 	if ctx == nil {
 		return nil, nil, invalid(ErrInvalidMetadata, "context", "must not be nil")
@@ -212,7 +261,11 @@ func (budget *Budget) Start(ctx context.Context, metadata Metadata) (WorkBudgetS
 	return scope, attachBudgetScope(ctx, scope), nil
 }
 
-// WithBudgetScope attaches a custom budget scope without replacing an existing owner.
+// WithBudgetScope attaches a nonnil custom scope to a nonnil context without
+// replacing an existing owner. It does not start, validate metadata for, or close
+// that scope, and does not reject an already-canceled context. Each attachment
+// has its own ordinal sequencer; derive further contexts from the returned one
+// to share sequencing.
 func WithBudgetScope(ctx context.Context, scope WorkBudgetScope) (context.Context, error) {
 	if ctx == nil {
 		return nil, invalid(ErrInvalidMetadata, "context", "must not be nil")
@@ -230,7 +283,9 @@ func attachBudgetScope(ctx context.Context, scope WorkBudgetScope) context.Conte
 	return context.WithValue(ctx, budgetContextKey{}, &budgetExecutionState{scope: scope})
 }
 
-// BudgetScopeFromContext returns the explicitly attached logical budget scope.
+// BudgetScopeFromContext returns the explicitly attached logical owner, including
+// a closed one. Nil contexts and missing/invalid attachments return nil, false.
+// It does not create a scope or change its accounting.
 func BudgetScopeFromContext(ctx context.Context) (WorkBudgetScope, bool) {
 	if ctx == nil {
 		return nil, false
@@ -248,7 +303,9 @@ func BudgetScopeFromContext(ctx context.Context) (WorkBudgetScope, bool) {
 	return state.scope, true
 }
 
-// AttemptFromContext returns the physical attempt currently invoking work.
+// AttemptFromContext returns structurally valid physical-attempt metadata attached
+// by admission. Nil contexts and missing/invalid metadata return zero, false.
+// Presence alone does not prove the associated permit remains active.
 func AttemptFromContext(ctx context.Context) (Attempt, bool) {
 	if ctx == nil {
 		return Attempt{}, false
@@ -265,6 +322,9 @@ func AttemptFromContext(ctx context.Context) (Attempt, bool) {
 
 // AdmitAttempt allocates unique physical-attempt lineage, admits it through
 // the attached shared budget, and returns a context carrying that attempt.
+// Missing attachment returns ErrBudgetScopeRequired. Failed validation/admission
+// may consume an ordinal; callers must not assume consecutive admissions. The
+// caller owns Complete on the returned permit and Close on the logical scope.
 func AdmitAttempt(ctx context.Context, origin AttemptOrigin, parent uint64, startedAt time.Time) (context.Context, Attempt, Permit, error) {
 	if ctx == nil {
 		return nil, Attempt{}, nil, invalid(ErrInvalidMetadata, "context", "must not be nil")
@@ -336,7 +396,10 @@ func (budget *Budget) pruneWindowLocked(resource *resourceBudget, now time.Time)
 	resource.recentAdditional = append(resource.recentAdditional[:0], resource.recentAdditional[first:]...)
 }
 
-// BudgetScope is the single retry-plus-hedge accounting owner for one logical execution.
+// BudgetScope is the concurrency-safe retry-plus-hedge accounting owner created
+// by Budget.Start. Its zero value is not usable and it must not be copied.
+// Explicit Close is required even after cancellation, completion or expiry;
+// original work is tracked but excluded from additional-work limits.
 type BudgetScope struct {
 	budget             *Budget
 	metadata           Metadata
@@ -348,7 +411,13 @@ type BudgetScope struct {
 	released           bool
 }
 
-// Acquire atomically admits original, retry, or hedge work without waiting.
+// Acquire atomically admits original, retry or hedge work without queueing for
+// quota capacity. The context must be nonnil, uncanceled and attached to this
+// scope; lineage must be valid and unique, with admitted parents for additional
+// work. Original admission must precede additional work. Closed scopes reject
+// new admissions.
+// It lazily reaps this scope's expired permits and samples Clock outside locks;
+// caller context/clock methods can still block. A permit does not start work.
 func (scope *BudgetScope) Acquire(ctx context.Context, attempt Attempt) (Permit, error) {
 	if ctx == nil {
 		return nil, invalid(ErrInvalidMetadata, "context", "must not be nil")
@@ -451,7 +520,9 @@ func (scope *BudgetScope) snapshotLocked(now time.Time) BudgetSnapshot {
 	}
 }
 
-// Snapshot reaps expired permits and returns bounded accounting state.
+// Snapshot lazily reaps this scope's expired permits, prunes shared window
+// history and returns a value copy. AdditionalActive is scope-local;
+// AdditionalRecent is resource-wide. Reading the snapshot does not close a scope.
 func (scope *BudgetScope) Snapshot() BudgetSnapshot {
 	now := scope.budget.config.Clock.Now()
 	scope.budget.mu.Lock()
@@ -465,7 +536,11 @@ func (scope *BudgetScope) Matches(metadata Metadata) bool {
 	return scope.metadata == metadata
 }
 
-// Close rejects new work and releases resource identity after active permits settle.
+// Close rejects new work, reaps observed expiry and releases the retained scope
+// slot once all its permits settle or expire. It does not stop work, complete
+// permits, or refund admission history. Resource identity remains while any
+// scopes, active additional permits or rolling history retain it. A second Close
+// returns ErrBudgetClosed. Owners must call it even on canceled contexts.
 func (scope *BudgetScope) Close() error {
 	now := scope.budget.config.Clock.Now()
 	scope.budget.mu.Lock()
@@ -487,7 +562,9 @@ const (
 	permitExpired
 )
 
-// WorkPermit owns exactly one admitted physical-work lifecycle.
+// WorkPermit owns one built-in admission and supports concurrent completion.
+// It must not be copied; its zero value is not usable. TTL expiry settles
+// accounting lazily and does not cancel physical work or close its scope.
 type WorkPermit struct {
 	scope      *BudgetScope
 	ordinal    uint64
@@ -496,7 +573,10 @@ type WorkPermit struct {
 	state      atomic.Uint32
 }
 
-// Complete releases concurrent capacity exactly once.
+// Complete settles this permit exactly once and releases additional concurrent
+// capacity, but neither refunds admissions nor closes an open scope. Duplicate
+// completion returns ErrPermitCompleted; previously observed expiry returns
+// ErrPermitExpired. Complete itself does not sample Clock or detect TTL expiry.
 func (permit *WorkPermit) Complete() error {
 	permit.scope.budget.mu.Lock()
 	defer permit.scope.budget.mu.Unlock()
