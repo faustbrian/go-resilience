@@ -1,5 +1,7 @@
 # Documentation
 
+[Repository entry](../README.md) · [Versioned ecosystem](https://github.com/faustbrian/go-library-tools/blob/v1.4.0/docs/ecosystem/README.md)
+
 ## Getting started
 
 - [Install and quick start](../README.md#install)
@@ -47,3 +49,20 @@
 - [Contribution guide](../CONTRIBUTING.md)
 - [Release history](../CHANGELOG.md)
 - [License](../LICENSE)
+
+## Complete documentation map
+
+- [API reference](api.md) — `docs/api.md`
+- [Benchmark report: 2026-08-02 Darwin arm64](benchmarks/2026-08-02-darwin-arm64.md) — `docs/benchmarks/2026-08-02-darwin-arm64.md`
+- [Budget accounting](budgets.md) — `docs/budgets.md`
+- [Composition and timing](composition.md) — `docs/composition.md`
+- [Design and ownership](design.md) — `docs/design.md`
+- [Errors and observation](errors.md) — `docs/errors.md`
+- [FAQ](faq.md) — `docs/faq.md`
+- [Kubernetes semantics](kubernetes.md) — `docs/kubernetes.md`
+- [Migration](migration.md) — `docs/migration.md`
+- [Operations and security](operations.md) — `docs/operations.md`
+- [Package map](package-map.md) — `docs/package-map.md`
+- [Performance](performance.md) — `docs/performance.md`
+- [Source documentation audit](source-documentation-audit.md) — `docs/source-documentation-audit.md`
+- [Threat model: v2 source contract](threat-model.md) — `docs/threat-model.md`

@@ -1,5 +1,7 @@
 # Operations and security
 
+[Documentation index](README.md) · [Repository entry](../README.md)
+
 Track outcomes by bounded policy and reason, not raw URL, tenant, credential,
 request body, or error text. Useful signals include additional admissions,
 budget denials, active permits, permit expiry, execution deadlines, operation
@@ -82,3 +84,6 @@ workspace cleanup; it is separate from ordinary public-binary verification and
 cannot be combined with `release_dry_run`. A bounded local pass does not certify
 full assurance, direct-consumer adoption or release publication. Report skipped,
 unavailable and failed boundaries explicitly.
+
+Choose the next guide in the [documentation index](README.md)
+or return to the [repository entry](../README.md) for installation and ownership.

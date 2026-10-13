@@ -1,5 +1,7 @@
 # Migration
 
+[Documentation index](README.md) · [Repository entry](../README.md)
+
 The published v2.0.0 contract uses `github.com/faustbrian/go-resilience/v2`.
 Migrate imports to `/v2`,
 set `BudgetConfig.MaxScopes` when the default is not appropriate, and verify
@@ -45,3 +47,6 @@ Adopt composition without changing focused policy behavior first:
 Do not replace application deadlines with a generic timeout wrapper. Do not
 make a non-idempotent operation replayable merely because a retry policy can
 invoke it repeatedly.
+
+Choose the next guide in the [documentation index](README.md)
+or return to the [repository entry](../README.md) for installation and ownership.

@@ -1,5 +1,7 @@
 # API reference
 
+[Documentation index](README.md) · [Repository entry](../README.md)
+
 The supported v2 canonical generated reference is:
 
 ```sh
@@ -44,3 +46,6 @@ repeatability.
 V2 classifies context sentinels and budget rejection details only when they are
 direct values. It preserves wrapped operation errors without invoking arbitrary
 error traversal methods.
+
+Choose the next guide in the [documentation index](README.md)
+or return to the [repository entry](../README.md) for installation and ownership.

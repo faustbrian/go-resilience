@@ -1,5 +1,7 @@
 # Performance
 
+[Documentation index](README.md) · [Repository entry](../README.md)
+
 Benchmarks compare semantically equivalent synchronous successful calls:
 
 - a direct function baseline;
@@ -28,3 +30,6 @@ and context behavior, `benchstat`, environment metadata, and raw output.
 Competitor policies with different cancellation, event, accounting, or result
 semantics must be reported separately rather than presented as faster or slower
 equivalents.
+
+Choose the next guide in the [documentation index](README.md)
+or return to the [repository entry](../README.md) for installation and ownership.

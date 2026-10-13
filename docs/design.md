@@ -1,5 +1,7 @@
 # Design and ownership
 
+[Documentation index](README.md) · [Repository entry](../README.md)
+
 The package owns only concepts that must be shared across focused resilience
 algorithms: composition, common outcome vocabulary, total-context enforcement,
 bounded events, and amplification accounting.
@@ -19,3 +21,6 @@ registry or graph edge through which a composition cycle can be introduced.
 Construction rejects nil policies, typed nils, invalid identities, incompatible
 duplicates, invalid scope order, descriptor panic, wrapper panic, and nil
 stages.
+
+Choose the next guide in the [documentation index](README.md)
+or return to the [repository entry](../README.md) for installation and ownership.

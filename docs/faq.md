@@ -1,5 +1,7 @@
 # FAQ
 
+[Documentation index](README.md) · [Repository entry](../README.md)
+
 ## Is this a resilience framework?
 
 No. It is a small explicit composition contract used by focused packages.
@@ -73,3 +75,6 @@ Budget accounting is process-local and is not shared across replicas or
 retained across restarts. Roll out gradually and inspect rejection reasons per
 process. Use an explicit distributed `WorkBudget` implementation only when the
 application requires cluster-wide coordination.
+
+Choose the next guide in the [documentation index](README.md)
+or return to the [repository entry](../README.md) for installation and ownership.

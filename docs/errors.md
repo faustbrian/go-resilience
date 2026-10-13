@@ -1,5 +1,7 @@
 # Errors and observation
 
+[Documentation index](README.md) · [Repository entry](../README.md)
+
 Use `errors.Is` for stable categories and `errors.As` for bounded details:
 
 - `ErrInvalidComposition`, `ErrInvalidMetadata`, `ErrInvalidAttempt`, and
@@ -33,3 +35,6 @@ call. `EventExecutionCanceled` records both caller cancellation and total
 deadline expiry, with the corresponding outcome kind as its bounded reason.
 Observers receive the bounded timeline after execution settles, so callback
 latency cannot alter operation behavior or budget accounting.
+
+Choose the next guide in the [documentation index](README.md)
+or return to the [repository entry](../README.md) for installation and ownership.

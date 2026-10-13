@@ -1,5 +1,7 @@
 # Composition and timing
 
+[Documentation index](README.md) · [Repository entry](../README.md)
+
 For policies supplied as `logicalA, logicalB, attemptA, attemptB`, invocation is:
 
 ```text
@@ -27,3 +29,6 @@ must use `PolicyFailure`. Observer panics are recovered after the result settles
 and do not become policy failures. Only an invoked downstream
 operation may produce `OutcomeOperationFailure`. This prevents breakers and
 adaptive controls from learning from local saturation.
+
+Choose the next guide in the [documentation index](README.md)
+or return to the [repository entry](../README.md) for installation and ownership.

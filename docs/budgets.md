@@ -1,5 +1,7 @@
 # Budget accounting
 
+[Documentation index](README.md) · [Repository entry](../README.md)
+
 One `BudgetScope` represents one logical call. It records exactly one original
 attempt and all retry or hedge attempts by stable ordinal and parent ordinal.
 Additional work is admitted only after its parent was admitted by the same
@@ -56,3 +58,6 @@ attempt is already owned by its outer executor and must not be admitted again.
 Additional work uses `AdmitAttempt` with that attempt or another previously
 admitted attempt as parent. Failed admissions may consume an ordinal but never
 consume budget capacity or invoke downstream work.
+
+Choose the next guide in the [documentation index](README.md)
+or return to the [repository entry](../README.md) for installation and ownership.

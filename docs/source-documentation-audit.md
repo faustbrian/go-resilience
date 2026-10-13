@@ -1,5 +1,7 @@
 # Source documentation audit
 
+[Documentation index](README.md) · [Repository entry](../README.md)
+
 ## Scope and compact plan
 
 Tier A source-contract documentation at main source
@@ -145,3 +147,6 @@ Ordinary shared CI uses `source_documentation: check` with immutable Tools
 v2.4.0 and matching authenticated binary/checksum declaration. Separately
 selected qualification source identities and gates remain unchanged. Structural
 checks do not replace this maintained semantic audit or native docs/examples.
+
+Choose the next guide in the [documentation index](README.md)
+or return to the [repository entry](../README.md) for installation and ownership.

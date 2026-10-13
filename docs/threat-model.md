@@ -1,5 +1,7 @@
 # Threat model: v2 source contract
 
+[Documentation index](README.md) · [Repository entry](../README.md)
+
 This model applies to the root `github.com/faustbrian/go-resilience/v2`
 source API. Public tags and releases establish actual publication; source
 presence alone does not. Released v1.1.0 remains historical
@@ -69,3 +71,6 @@ printable diagnostics. Existing permit/lineage/model and cancellation tests
 cover shared accounting and total-context enforcement. No local test result
 is a hosted scanner result or a public-consumer migration claim. The root is
 the sole module; no nested module or unrelated companion release is implied.
+
+Choose the next guide in the [documentation index](README.md)
+or return to the [repository entry](../README.md) for installation and ownership.

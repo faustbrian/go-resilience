@@ -1,5 +1,7 @@
 # Kubernetes semantics
 
+[Documentation index](README.md) · [Repository entry](../README.md)
+
 Executors are immutable and reusable inside a pod. The built-in budget and all
 focused stateful policies are pod-local unless a package explicitly documents
 a distributed backend.
@@ -19,3 +21,6 @@ a distributed backend.
 
 Dependency degradation belongs in readiness only when the service cannot
 safely serve any traffic. It must not be reported as process liveness failure.
+
+Choose the next guide in the [documentation index](README.md)
+or return to the [repository entry](../README.md) for installation and ownership.
