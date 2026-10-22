@@ -10,6 +10,12 @@
   State that policy-proposed contexts must preserve budget attachment; total
   cancellation enforcement does not restore dropped context values.
 
+## 2.1.0 - 2026-10-22
+
+### Changed
+
+- Publish the current source and documentation with a fresh immutable tag.
+
 ## 2.0.1 - 2026-10-06
 
 ### Maintenance
